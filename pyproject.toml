@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "atct"
+version = "1.0.0"
+description = "ATcT: Active Thermochemical Tables — Python client for v1 API"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "ATcT Team" }]
+keywords = ["thermochemistry", "ATcT", "chemistry", "science", "data"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "License :: OSI Approved :: BSD License",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Chemistry",
+]
+
+dependencies = []
+
+[project.optional-dependencies]
+pandas = ["pandas>=2.0"]
+
+[project.urls]
+Homepage = "https://example.com/ATcT"
+Issues = "https://example.com/ATcT/issues"
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "README.md", "LICENSE"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/atct"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "UP", "B"]
+target-version = "py39"
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_unused_ignores = true
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
