@@ -5,8 +5,8 @@ import atct
 from atct import get_species, search_species, get_covariance, ATCTError, NotFound
 
 def main():
-    """Demonstrate basic usage of the atct package."""
-    print("ATcT Python Client - Example Usage")
+    """Demonstrate basic usage of the atct package with v1 API."""
+    print("ATcT Python Client - Example Usage (v1 API)")
     print("=" * 40)
     
     # Test health check

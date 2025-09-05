@@ -99,11 +99,13 @@ except ATCTError as e:
 
 Set environment variables to configure the client:
 
-- `ATCT_API_BASE_URL` (default: `https://atct.anl.gov/api/v1`)
+- `ATCT_API_BASE_URL` (default: `https://atct.anl.gov/api/v1`) - API endpoint
 - `ATCT_API_KEY` (optional, for authenticated requests)
 - `ATCT_TIMEOUT_S` (default: `10` seconds)
 - `ATCT_RETRIES` (default: `3` retry attempts)
 - `ATCT_USER_AGENT` (default: `atct/1.0.0`)
+
+The client uses the v1 API exclusively.
 
 ## Development
 
