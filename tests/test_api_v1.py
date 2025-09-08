@@ -577,15 +577,12 @@ class TestReactionCalculations:
         calculator = ReactionCalculator(reaction_species)
         
         cov_result = calculator.calculate_covariance_method()
-        ss_result = calculator.calculate_sum_squares_method()
         conv_result = calculator.calculate_conventional_method()
         
         assert isinstance(cov_result, ReactionResult)
-        assert isinstance(ss_result, ReactionResult)
         assert isinstance(conv_result, ReactionResult)
         
         assert cov_result.method == "covariance"
-        assert ss_result.method == "sum_squares"
         assert conv_result.method == "conventional"
     
     def test_reaction_calculator_comparison(self):
@@ -613,13 +610,11 @@ class TestReactionCalculations:
         comparison = calculator.compare_methods()
         
         assert 'covariance' in comparison
-        assert 'sum_squares' in comparison
         assert 'conventional' in comparison
         assert 'difference' in comparison
         assert 'significance' in comparison
         
         assert isinstance(comparison['covariance'], ReactionResult)
-        assert isinstance(comparison['sum_squares'], ReactionResult)
         assert isinstance(comparison['conventional'], ReactionResult)
 
 

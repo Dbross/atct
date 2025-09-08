@@ -34,11 +34,9 @@ def main():
         print("   Calculating reaction enthalpy...")
         
         cov_result = calculate_reaction_enthalpy(species_data, 'covariance')
-        ss_result = calculate_reaction_enthalpy(species_data, 'sum_squares')
         conv_result = calculate_reaction_enthalpy(species_data, 'conventional')
         
         print(f"   Covariance method:     {cov_result}")
-        print(f"   Sum squares method:    {ss_result}")
         print(f"   Conventional method:   {conv_result}")
         print()
         
@@ -119,8 +117,69 @@ def main():
         print(f"   Error: {e}")
         print()
     
-    # Example 4: Demonstrate covariance matrix usage
-    print("4. Covariance Matrix Example:")
+    # Example 4: Benzene Combustion
+    print("4. Benzene Combustion Reaction:")
+    print("   C6H6 + 7.5 O2 → 6 CO2 + 3 H2O")
+    print()
+    
+    benzene_combustion_data = {
+        '71-43-2*0': -1.0,     # C6H6 (reactant)
+        '7782-44-7*0': -7.5,   # O2 (reactant)
+        '124-38-9*0': 6.0,     # CO2 (product)
+        '7732-18-5*500': 3.0     # H2O (product)
+    }
+    
+    try:
+        print("   Species data:")
+        for atct_id, coeff in benzene_combustion_data.items():
+            species = get_species(atct_id)
+            print(f"   {species.name} ({atct_id}): {species.delta_h_298k} ± {species.delta_h_298k_uncertainty} kJ/mol")
+        print()
+        
+        # Calculate using different methods
+        cov_result = calculate_reaction_enthalpy(benzene_combustion_data, 'covariance')
+        conv_result = calculate_reaction_enthalpy(benzene_combustion_data, 'conventional')
+        
+        print(f"   Covariance method:     {cov_result}")
+        print(f"   Conventional method:   {conv_result}")
+        print()
+        
+    except Exception as e:
+        print(f"   Error: {e}")
+        print()
+    
+    # Example 5: Benzene Ionization
+    print("5. Benzene Ionization Reaction:")
+    print("   C6H6 → C6H6+ + e-")
+    print()
+    
+    benzene_ionization_data = {
+        '71-43-2*0': -1.0,      # C6H6 (reactant)
+        '34504-50-2*0': 1.0,    # C6H6+ (product)
+        '183748-02-9*0': 1.0    # e- (product)
+    }
+    
+    try:
+        print("   Species data:")
+        for atct_id, coeff in benzene_ionization_data.items():
+            species = get_species(atct_id)
+            print(f"   {species.name} ({atct_id}): {species.delta_h_298k} ± {species.delta_h_298k_uncertainty} kJ/mol")
+        print()
+        
+        # Calculate using different methods
+        cov_result = calculate_reaction_enthalpy(benzene_ionization_data, 'covariance')
+        conv_result = calculate_reaction_enthalpy(benzene_ionization_data, 'conventional')
+        
+        print(f"   Covariance method:     {cov_result}")
+        print(f"   Conventional method:   {conv_result}")
+        print()
+        
+    except Exception as e:
+        print(f"   Error: {e}")
+        print()
+    
+    # Example 6: Demonstrate covariance matrix usage
+    print("6. Covariance Matrix Example:")
     print("   Getting covariance between methanol phases...")
     
     try:

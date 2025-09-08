@@ -169,17 +169,30 @@ class ReactionCalculator:
         n = len(self.reaction_species)
         matrix = np.zeros((n, n))
         
-        # For now, we'll use a simplified approach
-        # In a full implementation, you'd fetch actual covariance data
+        # Fill diagonal elements with variances
         for i in range(n):
-            for j in range(n):
-                if i == j:
-                    # Diagonal elements are variances (uncertainty squared)
-                    matrix[i, j] = self.uncertainties[i] ** 2
-                else:
-                    # Off-diagonal elements would be actual covariances
-                    # For now, assume zero correlation
+            matrix[i, i] = self.uncertainties[i] ** 2
+        
+        # Fill off-diagonal elements with actual covariances
+        # Import here to avoid circular imports
+        from . import get_species_covariance_by_atctid
+        
+        for i in range(n):
+            for j in range(i + 1, n):
+                try:
+                    # Get covariance between species i and j
+                    cov_data = get_species_covariance_by_atctid(
+                        self.reaction_species[i].species.atct_id,
+                        self.reaction_species[j].species.atct_id
+                    )
+                    # The covariance is the off-diagonal element of the 2x2 matrix
+                    covariance = cov_data.matrix[0][1]  # or [1][0], they should be the same
+                    matrix[i, j] = covariance
+                    matrix[j, i] = covariance  # Symmetric matrix
+                except Exception:
+                    # If covariance data is not available, assume zero correlation
                     matrix[i, j] = 0.0
+                    matrix[j, i] = 0.0
         
         return matrix
     
@@ -193,16 +206,6 @@ class ReactionCalculator:
         delta_h = np.dot(self.stoichiometry, self.enthalpies)
         return ReactionResult(delta_h, uncertainty, "covariance")
     
-    def calculate_sum_squares_method(self) -> ReactionResult:
-        """Calculate reaction enthalpy using sum of squares method."""
-        if NUMPY_AVAILABLE:
-            uncertainty = sqrt(sum((self.uncertainties * self.stoichiometry) ** 2))
-            delta_h = np.dot(self.stoichiometry, self.enthalpies)
-        else:
-            # Fallback calculation without numpy
-            uncertainty = sqrt(sum((u * s) ** 2 for u, s in zip(self.uncertainties, self.stoichiometry)))
-            delta_h = sum(h * s for h, s in zip(self.enthalpies, self.stoichiometry))
-        return ReactionResult(delta_h, uncertainty, "sum_squares")
     
     def calculate_conventional_method(self) -> ReactionResult:
         """Calculate reaction enthalpy using conventional uncertainty propagation."""
@@ -216,13 +219,11 @@ class ReactionCalculator:
         return ReactionResult(delta_h, uncertainty, "conventional")
     
     def compare_methods(self) -> Dict[str, Any]:
-        """Compare all three calculation methods."""
+        """Compare calculation methods."""
         results = {}
         
-        # Always available methods
-        ss_result = self.calculate_sum_squares_method()
+        # Always available method
         conv_result = self.calculate_conventional_method()
-        results['sum_squares'] = ss_result
         results['conventional'] = conv_result
         
         # Covariance method only if numpy is available
@@ -230,8 +231,8 @@ class ReactionCalculator:
             cov_result = self.calculate_covariance_method()
             results['covariance'] = cov_result
             
-            diff_unc = abs(cov_result.uncertainty - ss_result.uncertainty)
-            ref_unc = max(cov_result.uncertainty, ss_result.uncertainty)
+            diff_unc = abs(cov_result.uncertainty - conv_result.uncertainty)
+            ref_unc = max(cov_result.uncertainty, conv_result.uncertainty)
             significance_ratio = diff_unc / ref_unc if ref_unc > 0 else 0
             results['difference'] = diff_unc
             results['significance'] = significance_ratio

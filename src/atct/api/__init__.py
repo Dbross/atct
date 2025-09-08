@@ -78,13 +78,13 @@ def create_reaction_calculator(species_data: Dict[str, float]) -> ReactionCalcul
     
     return ReactionCalculator(reaction_species)
 
-def calculate_reaction_enthalpy(species_data: Dict[str, float], method: str = "sum_squares") -> ReactionResult:
+def calculate_reaction_enthalpy(species_data: Dict[str, float], method: str = "conventional") -> ReactionResult:
     """Calculate reaction enthalpy for a given reaction.
     
     Args:
         species_data: Dictionary mapping ATcT IDs to stoichiometric coefficients
-        method: Calculation method ("covariance", "sum_squares", or "conventional")
-                Defaults to "sum_squares" for compatibility without numpy
+        method: Calculation method ("covariance" or "conventional")
+                Defaults to "conventional" for compatibility without numpy
     
     Returns:
         ReactionResult with enthalpy and uncertainty
@@ -93,9 +93,7 @@ def calculate_reaction_enthalpy(species_data: Dict[str, float], method: str = "s
     
     if method == "covariance":
         return calculator.calculate_covariance_method()
-    elif method == "sum_squares":
-        return calculator.calculate_sum_squares_method()
     elif method == "conventional":
         return calculator.calculate_conventional_method()
     else:
-        raise ValueError(f"Unknown method: {method}. Use 'covariance', 'sum_squares', or 'conventional'")
+        raise ValueError(f"Unknown method: {method}. Use 'covariance' or 'conventional'")

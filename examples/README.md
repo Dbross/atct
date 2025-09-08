@@ -18,8 +18,10 @@ Advanced reaction enthalpy calculation examples, including:
 - Methanol combustion reaction
 - CH + N2 → HC(NN) reaction example
 - Water formation reaction
+- **Benzene combustion reaction** (C6H6 + 7.5 O2 → 6 CO2 + 3 H2O)
+- **Benzene ionization reaction** (C6H6 → C6H6+ + e-)
 - Covariance matrix usage
-- Comparison of different uncertainty propagation methods
+- Comparison of covariance vs conventional uncertainty propagation methods
 
 ## Running the Examples
 

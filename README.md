@@ -73,7 +73,7 @@ print(f"Reaction enthalpy: {result}")
 - `create_reaction_calculator(species_data)` - Create reaction calculator
 
 **Note:** The `covariance` method requires numpy (`pip install atct[numpy]`). 
-The `sum_squares` and `conventional` methods work without external dependencies.
+The `conventional` method works without external dependencies.
 
 ### Utility
 - `healthcheck()` - Check API health status
