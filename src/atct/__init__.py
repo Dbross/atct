@@ -1,32 +1,45 @@
-"""ATcT: Active Thermochemical Tables - Python client for v1 API."""
-
 from .api import (
-    get_species,
-    search_species,
-    get_covariance,
-    get_species_by_smiles,
-    get_species_by_casrn,
     healthcheck,
+    get_species,
+    get_species_by_casrn,
+    get_species_by_inchi,
+    get_species_by_smiles,
+    get_species_by_formula,
+    get_species_by_name,
+    search_species,
+    get_species_covariance_by_ids,
+    get_species_covariance_by_atctid,
+    create_reaction_calculator,
+    calculate_reaction_enthalpy,
 )
-from .api.models import Species, CovarianceMatrix, Page, Uncertainty
+from .api.models import Species, Covariance2x2, Page, ReactionSpecies, ReactionResult, ReactionCalculator
+from .api.pandas_io import as_dataframe
 from .api.exceptions import ATCTError, NotFound, BadRequest, Unauthorized, ServerError, NetworkError
 
-__version__ = "1.0.0"
 __all__ = [
-    "get_species",
-    "search_species", 
-    "get_covariance",
-    "get_species_by_smiles",
-    "get_species_by_casrn",
     "healthcheck",
+    "get_species",
+    "get_species_by_casrn",
+    "get_species_by_inchi",
+    "get_species_by_smiles",
+    "get_species_by_formula",
+    "get_species_by_name",
+    "search_species",
+    "get_species_covariance_by_ids",
+    "get_species_covariance_by_atctid",
+    "create_reaction_calculator",
+    "calculate_reaction_enthalpy",
     "Species",
-    "CovarianceMatrix", 
+    "Covariance2x2",
     "Page",
-    "Uncertainty",
+    "ReactionSpecies",
+    "ReactionResult",
+    "ReactionCalculator",
+    "as_dataframe",
     "ATCTError",
     "NotFound",
     "BadRequest",
-    "Unauthorized", 
+    "Unauthorized",
     "ServerError",
     "NetworkError",
 ]

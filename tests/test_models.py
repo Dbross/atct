@@ -1,7 +1,7 @@
 """Test the data models."""
 
 import pytest
-from atct.api.models import Species, CovarianceMatrix, Uncertainty, Page
+from atct.api.models import Species, Covariance2x2, Page
 
 
 def test_species_from_dict():
@@ -10,11 +10,10 @@ def test_species_from_dict():
         "ATcT_ID": "67-56-1*0",
         "Name": "Methanol",
         "Formula": "CH4O (g)",
-        "phase": "g",
-        "Delta_Hf_298K": -201.0,
-        "Delta_Hf298K_uncertainty": 0.1,
+        "Delta_Hf_298K": "-201.0",
+        "Delta_Hf298K_uncertainty": "0.1",
         "SMILES": "CO",
-        "mass": 32.04
+        "mass": "32.04"
     }
     
     species = Species.from_dict(data)
@@ -22,13 +21,10 @@ def test_species_from_dict():
     assert species.atct_id == "67-56-1*0"
     assert species.name == "Methanol"
     assert species.formula == "CH4O (g)"
-    assert species.phase == "g"
-    assert species.delta_h_298k == -201.0
-    assert species.delta_h_298k_unc is not None
-    assert species.delta_h_298k_unc.value == 0.1
-    assert species.delta_h_298k_unc.unit == "kJ/mol"
+    assert species.delta_h_298k == "-201.0"
+    assert species.delta_h_298k_uncertainty == "0.1"
     assert species.smiles == "CO"
-    assert species.mass == 32.04
+    assert species.mass == "32.04"
 
 
 def test_species_from_dict_exact_uncertainty():
@@ -37,63 +33,78 @@ def test_species_from_dict_exact_uncertainty():
         "ATcT_ID": "67-56-1*0",
         "Name": "Methanol",
         "Formula": "CH4O (g)",
-        "Delta_Hf_298K": -201.0,
+        "Delta_Hf_298K": "-201.0",
         "Delta_Hf298K_uncertainty": "exact"
     }
     
     species = Species.from_dict(data)
     
-    assert species.delta_h_298k == -201.0
-    assert species.delta_h_298k_unc is None
+    assert species.delta_h_298k == "-201.0"
+    assert species.delta_h_298k_uncertainty == "exact"
 
 
-def test_covariance_matrix_from_dict_v1():
-    """Test CovarianceMatrix creation from v1 API response."""
+def test_covariance2x2_from_dict():
+    """Test Covariance2x2 creation from API response."""
     data = {
-        "atctid1": "67-56-1*0",
-        "atctid2": "7727-37-9*0",
-        "matrix": [[0.01, 0.005], [0.005, 0.02]],
-        "version": "1.123"
+        "labels": ["ΔH(A)", "ΔH(B)"],
+        "units": "kJ/mol",
+        "matrix": [[0.01, 0.005], [0.005, 0.02]]
     }
     
-    cov_matrix = CovarianceMatrix.from_dict(data)
+    cov_matrix = Covariance2x2.from_dict(data)
     
-    assert cov_matrix.atct_id1 == "67-56-1*0"
-    assert cov_matrix.atct_id2 == "7727-37-9*0"
+    assert cov_matrix.labels == ["ΔH(A)", "ΔH(B)"]
+    assert cov_matrix.units == "kJ/mol"
     assert cov_matrix.matrix == [[0.01, 0.005], [0.005, 0.02]]
-    assert cov_matrix.version == "1.123"
 
 
-def test_covariance_matrix_from_dict_legacy():
-    """Test CovarianceMatrix creation from legacy API response."""
+def test_covariance2x2_defaults():
+    """Test Covariance2x2 with default values."""
     data = {
-        "atctid1": "67-56-1*0",
-        "atctid2": "7727-37-9*0",
-        "covariance": 0.005,
-        "ATcT_TN_Version": "1.123"
+        "matrix": [[0.01, 0.005], [0.005, 0.02]]
     }
     
-    cov_matrix = CovarianceMatrix.from_dict(data)
+    cov_matrix = Covariance2x2.from_dict(data)
     
-    assert cov_matrix.atct_id1 == "67-56-1*0"
-    assert cov_matrix.atct_id2 == "7727-37-9*0"
-    assert cov_matrix.matrix == [[0.0, 0.005], [0.005, 0.0]]
-    assert cov_matrix.version == "1.123"
-
-
-def test_uncertainty_creation():
-    """Test Uncertainty dataclass."""
-    unc = Uncertainty(value=0.1, unit="kJ/mol", method="ATcT")
-    
-    assert unc.value == 0.1
-    assert unc.unit == "kJ/mol"
-    assert unc.method == "ATcT"
+    assert cov_matrix.labels == ["ΔH(A)", "ΔH(B)"]
+    assert cov_matrix.units == ""
+    assert cov_matrix.matrix == [[0.01, 0.005], [0.005, 0.02]]
 
 
 def test_page_creation():
     """Test Page dataclass."""
-    species1 = Species("id1", "name1", "formula1")
-    species2 = Species("id2", "name2", "formula2")
+    species1 = Species(
+        atct_id="id1",
+        name="name1",
+        formula="formula1",
+        atct_tn_version=None,
+        delta_h_0k=None,
+        delta_h_298k=None,
+        delta_h_298k_uncertainty=None,
+        unit=None,
+        mass=None,
+        mass_uncertainty=None,
+        smiles=None,
+        casrn=None,
+        charge=None,
+        xyz=None
+    )
+    species2 = Species(
+        atct_id="id2",
+        name="name2",
+        formula="formula2",
+        atct_tn_version=None,
+        delta_h_0k=None,
+        delta_h_298k=None,
+        delta_h_298k_uncertainty=None,
+        unit=None,
+        mass=None,
+        mass_uncertainty=None,
+        smiles=None,
+        casrn=None,
+        charge=None,
+        xyz=None
+    )
     
     page = Page(items=[species1, species2], total=2, limit=50, offset=0)
     
