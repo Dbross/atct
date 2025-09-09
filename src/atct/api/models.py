@@ -189,6 +189,8 @@ class ReactionCalculator:
                     covariance = cov_data.matrix[0][1]  # or [1][0], they should be the same
                     matrix[i, j] = covariance
                     matrix[j, i] = covariance  # Symmetric matrix
+                    matrix[i, i] = cov_data.matrix[0][0]
+                    matrix[j, j] = cov_data.matrix[1][1] 
                 except Exception:
                     # If covariance data is not available, assume zero correlation
                     matrix[i, j] = 0.0
