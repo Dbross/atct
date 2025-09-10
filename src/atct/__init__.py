@@ -15,9 +15,10 @@ from .api import (
     get_species_simple,
     get_all_species,
     create_reaction_calculator,
+    create_reaction_calculator_async,
     calculate_reaction_enthalpy,
 )
-from .api.models import Species, CovarianceMatrix, Covariance2x2, Page, ReactionSpecies, ReactionResult, ReactionCalculator
+from .api.models import Species, CovarianceMatrix, Covariance2x2, Page, ReactionSpecies, ReactionResult, ReactionCalculator, NUMPY_AVAILABLE
 from .api.pandas_io import as_dataframe
 from .api.exceptions import ATCTError, NotFound, BadRequest, Unauthorized, ServerError, NetworkError, TooManyRequests
 
@@ -38,6 +39,7 @@ __all__ = [
     "get_species_simple",
     "get_all_species",
     "create_reaction_calculator",
+    "create_reaction_calculator_async",
     "calculate_reaction_enthalpy",
     "Species",
     "CovarianceMatrix",

@@ -493,7 +493,16 @@ async def create_reaction_calculator_async(species_data: Dict[str, float]) -> Re
     for species, (atct_id, stoichiometry) in zip(species_list, species_data.items()):
         reaction_species.append(ReactionSpecies(species, stoichiometry))
     
-    return ReactionCalculator(reaction_species)
+    # Create calculator without building covariance matrix initially
+    calculator = ReactionCalculator(reaction_species, cov_matrix=None, build_cov_matrix=False)
+    try:
+        import numpy as np
+        # If numpy is available, build async covariance matrix
+        calculator.cov_matrix = await calculator._build_covariance_matrix_async()
+    except ImportError:
+        pass  # numpy not available, leave cov_matrix as None
+    
+    return calculator
 
 def create_reaction_calculator(species_data: Dict[str, float], block: bool = False) -> Union[ReactionCalculator, asyncio.Task]:
     """Create a ReactionCalculator from species ATcT IDs and stoichiometry.

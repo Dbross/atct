@@ -154,7 +154,7 @@ class ReactionResult:
 class ReactionCalculator:
     """Calculate reaction enthalpies with proper uncertainty propagation."""
     
-    def __init__(self, reaction_species: List[ReactionSpecies]):
+    def __init__(self, reaction_species: List[ReactionSpecies], cov_matrix: Optional[np.ndarray] = None, build_cov_matrix: bool = True):
         """Initialize with list of ReactionSpecies objects."""
         self.reaction_species = reaction_species
         
@@ -170,8 +170,13 @@ class ReactionCalculator:
                 for unc in self.uncertainties
             ])
             
-            # Build covariance matrix
-            self.cov_matrix = self._build_covariance_matrix()
+            # Use provided covariance matrix or build it (if requested)
+            if cov_matrix is not None:
+                self.cov_matrix = cov_matrix
+            elif build_cov_matrix:
+                self.cov_matrix = self._build_covariance_matrix()
+            else:
+                self.cov_matrix = None
         else:
             # Fallback to lists when numpy is not available
             self.stoichiometry = [rs.stoichiometry for rs in reaction_species]
@@ -224,6 +229,43 @@ class ReactionCalculator:
                         matrix[j, i] = covariance  # Symmetric matrix
                         matrix[i, i] = cov_data.matrix[0][0]
                         matrix[j, j] = cov_data.matrix[1][1]
+                except Exception:
+                    # If covariance data is not available, assume zero correlation
+                    matrix[i, j] = 0.0
+                    matrix[j, i] = 0.0
+        
+        return matrix
+    
+    async def _build_covariance_matrix_async(self):
+        """Build covariance matrix from species data asynchronously."""
+        if not NUMPY_AVAILABLE:
+            return None
+            
+        n = len(self.reaction_species)
+        matrix = np.zeros((n, n))
+        
+        # Fill diagonal elements with variances
+        for i in range(n):
+            matrix[i, i] = self.uncertainties[i] ** 2
+        
+        # Fill off-diagonal elements with actual covariances
+        # Import here to avoid circular imports
+        from . import get_species_covariance_by_atctid_async
+        
+        for i in range(n):
+            for j in range(i + 1, n):
+                try:
+                    # Get covariance between species i and j asynchronously
+                    cov_data = await get_species_covariance_by_atctid_async(
+                        self.reaction_species[i].species.atct_id,
+                        self.reaction_species[j].species.atct_id
+                    )
+                    # The covariance is the off-diagonal element of the 2x2 matrix
+                    covariance = cov_data.matrix[0][1]  # or [1][0], they should be the same
+                    matrix[i, j] = covariance
+                    matrix[j, i] = covariance  # Symmetric matrix
+                    matrix[i, i] = cov_data.matrix[0][0]
+                    matrix[j, j] = cov_data.matrix[1][1]
                 except Exception:
                     # If covariance data is not available, assume zero correlation
                     matrix[i, j] = 0.0
