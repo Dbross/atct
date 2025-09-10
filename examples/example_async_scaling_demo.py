@@ -96,12 +96,20 @@ async def main():
     
     # Display some results
     print("\nSample results:")
-    for i, (reaction_name, (cov_result, conv_result)) in enumerate(list(reaction_results.items())[:5]):
+    successful_count = 0
+    for i, (reaction_name, (cov_result, conv_result)) in enumerate(reaction_results.items()):
         if not isinstance(cov_result, Exception) and not isinstance(conv_result, Exception):
-            print(f"{i+1}. {reaction_name}:")
+            successful_count += 1
+            print(f"{successful_count}. {reaction_name}:")
             print(f"   Covariance: {cov_result}")
             print(f"   Conventional: {conv_result}")
             print()
+            if successful_count >= 5:  # Show first 5 successful results
+                break
+        else:
+            print(f"Failed: {reaction_name} - Cov: {type(cov_result).__name__}, Conv: {type(conv_result).__name__}")
+    
+    print(f"\nSuccessful reactions: {successful_count}/{len(reaction_results)}")
     
     print(f"=== Async Scaling Demo Complete ===")
     print(f"Processed {len(reactions)} reactions with {len(all_tasks)} total API requests")
