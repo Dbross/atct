@@ -129,12 +129,12 @@ def get_species_covariance_matrix(ids: Optional[List[str]] = None, atctids: Opti
 
 def get_species_covariance_by_ids(a_id: int, b_id: int) -> Covariance2x2:
     """Legacy function for 2x2 covariance matrix by internal IDs."""
-    data = request_json("GET", f"{settings.base_url}/covariance/species/", params={"a_id": int(a_id), "b_id": int(b_id)})
+    data = request_json("GET", f"{settings.base_url}/covariance/species/", params={"ids": f"{int(a_id)},{int(b_id)}"})
     return Covariance2x2.from_dict(data)
 
 def get_species_covariance_by_atctid(a_atctid: str, b_atctid: str) -> Covariance2x2:
     """Legacy function for 2x2 covariance matrix by ATcT IDs."""
-    data = request_json("GET", f"{settings.base_url}/covariance/species/", params={"a_atctid": a_atctid, "b_atctid": b_atctid})
+    data = request_json("GET", f"{settings.base_url}/covariance/species/", params={"atctids": f"{a_atctid},{b_atctid}"})
     return Covariance2x2.from_dict(data)
 
 # -------- simple API endpoints --------

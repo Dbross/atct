@@ -24,6 +24,7 @@ from atct.api import (
 )
 from atct.api.models import Species, CovarianceMatrix, Covariance2x2, Page, ReactionSpecies, ReactionResult, ReactionCalculator
 from atct.api.pandas_io import as_dataframe
+from atct.api._config import settings
 from atct.api.exceptions import NotFound, ATCTError
 
 
@@ -796,8 +797,8 @@ class TestPandasIO:
     
     def test_as_dataframe_no_pandas(self):
         """Test DataFrame creation when pandas is not available."""
-        with patch('atct.api.pandas_io.PANDAS_AVAILABLE', False):
-            with pytest.raises(ImportError, match="pandas is required"):
+        with patch('atct.api.pandas_io.pd', None):
+            with pytest.raises(ImportError, match="Install with `pyATcT\\[pandas\\]` for DataFrame support"):
                 as_dataframe([{"test": "data"}])
 
 
@@ -805,8 +806,9 @@ class TestIntegration:
     """Integration tests with real API (if environment variable is set)."""
     
     @pytest.mark.skipif(
-        not os.environ.get("ATCT_API_BASE_URL"),
-        reason="ATCT_API_BASE_URL not set - skipping integration tests"
+        not (os.environ.get("ATCT_API_BASE_URL") or 
+             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1")),
+        reason="ATCT_API_BASE_URL not set and not using production endpoint - skipping integration tests"
     )
     def test_real_healthcheck(self):
         """Test real health check against API."""
@@ -814,8 +816,9 @@ class TestIntegration:
         assert isinstance(result, bool)
     
     @pytest.mark.skipif(
-        not os.environ.get("ATCT_API_BASE_URL"),
-        reason="ATCT_API_BASE_URL not set - skipping integration tests"
+        not (os.environ.get("ATCT_API_BASE_URL") or 
+             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1")),
+        reason="ATCT_API_BASE_URL not set and not using production endpoint - skipping integration tests"
     )
     def test_real_get_species(self):
         """Test real species retrieval."""
@@ -828,8 +831,9 @@ class TestIntegration:
         assert species.casrn == "67-56-1"
     
     @pytest.mark.skipif(
-        not os.environ.get("ATCT_API_BASE_URL"),
-        reason="ATCT_API_BASE_URL not set - skipping integration tests"
+        not (os.environ.get("ATCT_API_BASE_URL") or 
+             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1")),
+        reason="ATCT_API_BASE_URL not set and not using production endpoint - skipping integration tests"
     )
     def test_real_search_species(self):
         """Test real species search."""
@@ -839,8 +843,9 @@ class TestIntegration:
         assert all(isinstance(item, Species) for item in page.items)
     
     @pytest.mark.skipif(
-        not os.environ.get("ATCT_API_BASE_URL"),
-        reason="ATCT_API_BASE_URL not set - skipping integration tests"
+        not (os.environ.get("ATCT_API_BASE_URL") or 
+             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1")),
+        reason="ATCT_API_BASE_URL not set and not using production endpoint - skipping integration tests"
     )
     def test_real_covariance(self):
         """Test real covariance retrieval."""

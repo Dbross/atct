@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Example usage of pyATcT reaction enthalpy calculations."""
+"""Example usage of ATcT reaction enthalpy calculations."""
 
 import os
-from atct.api import (
+from atct import (
     get_species,
     create_reaction_calculator,
     calculate_reaction_enthalpy,
-    get_species_covariance_by_atctid
+    get_species_covariance_by_atctid,
+    get_species_covariance_matrix
 )
-from atct.api.models import ReactionSpecies, ReactionResult, ReactionCalculator
+from atct import ReactionSpecies, ReactionResult, ReactionCalculator
 
 def main():
     """Demonstrate reaction enthalpy calculations."""
-    print("=== pyATcT Reaction Enthalpy Calculations ===\n")
+    print("=== ATcT Reaction Enthalpy Calculations ===\n")
     
     # Set API base URL (optional - defaults to production)
     # os.environ["ATCT_API_BASE_URL"] = "https://atct.anl.gov/api/v1"
@@ -80,8 +81,8 @@ def main():
         comparison = calculator.compare_methods()
         
         print("   Method comparison:")
-        print(f"   Covariance method:     {comparison['covariance']}")
-        print(f"   Sum of squares method: {comparison['sum_squares']}")
+        if comparison['covariance']:
+            print(f"   Covariance method:     {comparison['covariance']}")
         print(f"   Conventional method:   {comparison['conventional']}")
         print(f"   Difference in uncertainty: {comparison['difference']:.6f} kJ/mol")
         print(f"   Statistical significance: {comparison['significance']:.1%} of reference uncertainty")
@@ -187,6 +188,24 @@ def main():
         print(f"   Covariance matrix: {cov.matrix}")
         print(f"   Labels: {cov.labels}")
         print(f"   Units: {cov.units}")
+        print()
+        
+    except Exception as e:
+        print(f"   Error: {e}")
+        print()
+    
+    # Example 6b: Full covariance matrix for reaction species
+    print("6b. Full Covariance Matrix for Reaction Species:")
+    print("   Getting full covariance matrix for methanol combustion species...")
+    
+    try:
+        # Get all species involved in methanol combustion
+        reaction_atctids = ['67-56-1*0', '7727-37-9*0', '124-38-9*0', '7732-18-5*500']
+        cov_matrix = get_species_covariance_matrix(atctids=reaction_atctids)
+        print(f"   Full covariance matrix shape: {len(cov_matrix.matrix)}x{len(cov_matrix.matrix[0])}")
+        print(f"   Species ATcT IDs: {cov_matrix.species_atctids}")
+        print(f"   Units: {cov_matrix.units}")
+        print(f"   Diagonal (variances): {[cov_matrix.matrix[i][i] for i in range(len(cov_matrix.matrix))]}")
         print()
         
     except Exception as e:

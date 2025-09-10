@@ -15,3 +15,6 @@ class ServerError(ATCTError):
 
 class NetworkError(ATCTError):
     pass
+
+class TooManyRequests(ATCTError):
+    pass
