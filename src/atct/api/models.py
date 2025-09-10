@@ -38,11 +38,10 @@ class Species:
     delta_h_0k: Optional[str]
     delta_h_298k: Optional[str]
     delta_h_298k_uncertainty: Optional[str]
-    unit: Optional[str]
-    mass: Optional[str]
-    mass_uncertainty: Optional[str]
     smiles: Optional[str]
     casrn: Optional[str]
+    inchi: Optional[str]
+    inchi_key: Optional[str]
     charge: Optional[int]
     xyz: XYZType
 
@@ -53,14 +52,13 @@ class Species:
             atct_id=d.get("ATcT_ID") or "",
             name=d.get("Name"),
             formula=d.get("Formula"),
-            delta_h_0k=d.get("Delta_Hf_0K"),
-            delta_h_298k=d.get("Delta_Hf_298K"),
-            delta_h_298k_uncertainty=d.get("Delta_Hf298K_uncertainty"),
-            unit=d.get("unit"),
-            mass=d.get("mass"),
-            mass_uncertainty=d.get("mass_uncertainty"),
+            delta_h_0k=d.get("∆fH_0K"),
+            delta_h_298k=d.get("∆fH_298K"),
+            delta_h_298k_uncertainty=d.get("∆fH_298K_uncertainty"),
             smiles=d.get("SMILES"),
             casrn=d.get("CASRN"),
+            inchi=d.get("InChI"),
+            inchi_key=d.get("InChI_Key"),
             charge=(int(d["charge"]) if d.get("charge") is not None else None),
             xyz=d.get("XYZ"),
         )
@@ -71,20 +69,44 @@ class Species:
             "ATcT_ID": self.atct_id,
             "Name": self.name,
             "Formula": self.formula,
-            "Delta_Hf_0K": self.delta_h_0k,
-            "Delta_Hf_298K": self.delta_h_298k,
-            "Delta_Hf298K_uncertainty": self.delta_h_298k_uncertainty,
-            "unit": self.unit,
-            "mass": self.mass,
-            "mass_uncertainty": self.mass_uncertainty,
+            "∆fH_0K": self.delta_h_0k,
+            "∆fH_298K": self.delta_h_298k,
+            "∆fH_298K_uncertainty": self.delta_h_298k_uncertainty,
             "SMILES": self.smiles,
             "CASRN": self.casrn,
+            "InChI": self.inchi,
+            "InChI_Key": self.inchi_key,
             "charge": self.charge,
             "XYZ": self.xyz,
         }
 
 
 # ---------- Covariance ----------
+@dataclass
+class CovarianceMatrix:
+    species_ids: List[str]
+    species_atctids: List[str]
+    matrix: List[List[float]]
+    units: str = "kJ/mol"
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "CovarianceMatrix":
+        return CovarianceMatrix(
+            species_ids=list(d.get("species_ids", [])),
+            species_atctids=list(d.get("species_atctids", [])),
+            matrix=[[float(x) for x in row] for row in d.get("matrix", [])],
+            units=str(d.get("units", "kJ/mol")),
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "species_ids": self.species_ids,
+            "species_atctids": self.species_atctids,
+            "matrix": self.matrix,
+            "units": self.units
+        }
+
+# Legacy support for 2x2 covariance
 @dataclass
 class Covariance2x2:
     labels: List[str]

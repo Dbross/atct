@@ -6,18 +6,23 @@ from unittest.mock import patch, MagicMock
 from atct.api import (
     healthcheck,
     get_species,
+    get_species_by_atctid,
     get_species_by_casrn,
     get_species_by_inchi,
+    get_species_by_inchikey,
     get_species_by_smiles,
     get_species_by_formula,
     get_species_by_name,
     search_species,
+    get_species_covariance_matrix,
     get_species_covariance_by_ids,
     get_species_covariance_by_atctid,
+    get_species_simple,
+    get_all_species,
     create_reaction_calculator,
     calculate_reaction_enthalpy,
 )
-from atct.api.models import Species, Covariance2x2, Page, ReactionSpecies, ReactionResult, ReactionCalculator
+from atct.api.models import Species, CovarianceMatrix, Covariance2x2, Page, ReactionSpecies, ReactionResult, ReactionCalculator
 from atct.api.pandas_io import as_dataframe
 from atct.api.exceptions import NotFound, ATCTError
 
@@ -51,14 +56,13 @@ class TestGetSpecies:
             "ATcT_ID": "67-56-1*0",
             "Name": "Methanol",
             "Formula": "CH4O",
-            "Delta_Hf_0K": "-201.0",
-            "Delta_Hf_298K": "-201.0",
-            "Delta_Hf298K_uncertainty": "0.1",
-            "unit": "kJ/mol",
-            "mass": "32.04",
-            "mass_uncertainty": "0.001",
+            "∆fH_0K": "-201.0",
+            "∆fH_298K": "-201.0",
+            "∆fH_298K_uncertainty": "0.1",
             "SMILES": "CO",
             "CASRN": "67-56-1",
+            "InChI": "InChI=1S/CH4O/c1-2/h2H,1H3",
+            "InChI_Key": "OKKJLVBELUTLKV-UHFFFAOYSA-N",
             "charge": 0,
             "XYZ": None
         }
@@ -73,6 +77,8 @@ class TestGetSpecies:
             assert species.formula == "CH4O"
             assert species.smiles == "CO"
             assert species.casrn == "67-56-1"
+            assert species.inchi == "InChI=1S/CH4O/c1-2/h2H,1H3"
+            assert species.inchi_key == "OKKJLVBELUTLKV-UHFFFAOYSA-N"
             assert species.charge == 0
             mock_request.assert_called_once()
     
@@ -92,6 +98,30 @@ class TestGetSpecies:
             assert species.atct_id == "67-56-1*0"
             assert isinstance(species.xyz, list)
             assert len(species.xyz) == 6
+            mock_request.assert_called_once()
+    
+    def test_get_species_by_atctid_list_response(self):
+        """Test get_species_by_atctid with list response."""
+        mock_data = [{
+            "ATcT_ID": "67-56-1*0",
+            "Name": "Methanol",
+            "Formula": "CH4O",
+            "∆fH_298K": "-201.0",
+            "SMILES": "CO",
+            "CASRN": "67-56-1",
+            "InChI": "InChI=1S/CH4O/c1-2/h2H,1H3",
+            "InChI_Key": "OKKJLVBELUTLKV-UHFFFAOYSA-N",
+            "charge": 0,
+            "XYZ": None
+        }]
+        
+        with patch('atct.api.request_json') as mock_request:
+            mock_request.return_value = mock_data
+            species = get_species_by_atctid("67-56-1*0")
+            
+            assert isinstance(species, Species)
+            assert species.atct_id == "67-56-1*0"
+            assert species.name == "Methanol"
             mock_request.assert_called_once()
 
 
@@ -166,6 +196,28 @@ class TestGetSpeciesBy:
             assert len(page.items) == 1
             assert page.items[0].smiles == "CO"
     
+    def test_get_species_by_inchikey(self):
+        """Test species retrieval by InChI Key."""
+        mock_data = {
+            "items": [{
+                "ATcT_ID": "67-56-1*0",
+                "Name": "Methanol",
+                "Formula": "CH4O",
+                "InChI_Key": "OKKJLVBELUTLKV-UHFFFAOYSA-N"
+            }],
+            "total": 1,
+            "limit": 50,
+            "offset": 0
+        }
+        
+        with patch('atct.api.request_json') as mock_request:
+            mock_request.return_value = mock_data
+            page = get_species_by_inchikey("OKKJLVBELUTLKV-UHFFFAOYSA-N")
+            
+            assert isinstance(page, Page)
+            assert len(page.items) == 1
+            assert page.items[0].inchi_key == "OKKJLVBELUTLKV-UHFFFAOYSA-N"
+    
     def test_get_species_by_formula(self):
         """Test species retrieval by formula."""
         mock_data = {
@@ -230,6 +282,67 @@ class TestGetSpeciesBy:
             assert isinstance(page, Page)
             assert len(page.items) == 1
             assert page.items[0].name == "Methanol"
+
+
+class TestSimpleAPI:
+    """Test simple API endpoints."""
+    
+    def test_get_species_simple_by_smiles(self):
+        """Test simple API with SMILES."""
+        mock_data = [{
+            "ATcT_ID": "67-56-1*0",
+            "Name": "Methanol",
+            "Formula": "CH4O",
+            "SMILES": "CO"
+        }]
+        
+        with patch('atct.api.request_json') as mock_request:
+            mock_request.return_value = mock_data
+            species = get_species_simple(smiles="CO")
+            
+            assert isinstance(species, Species)
+            assert species.atct_id == "67-56-1*0"
+            assert species.name == "Methanol"
+            mock_request.assert_called_once()
+    
+    def test_get_species_simple_by_name(self):
+        """Test simple API with name."""
+        mock_data = [{
+            "ATcT_ID": "67-56-1*0",
+            "Name": "Methanol",
+            "Formula": "CH4O"
+        }]
+        
+        with patch('atct.api.request_json') as mock_request:
+            mock_request.return_value = mock_data
+            species = get_species_simple(name="methanol")
+            
+            assert isinstance(species, Species)
+            assert species.name == "Methanol"
+            mock_request.assert_called_once()
+    
+    def test_get_species_simple_no_params(self):
+        """Test simple API with no parameters."""
+        with pytest.raises(ValueError, match="At least one parameter must be provided"):
+            get_species_simple()
+    
+    def test_get_all_species(self):
+        """Test get all species."""
+        mock_data = [{
+            "ATcT_ID": "67-56-1*0",
+            "Name": "Methanol",
+            "Formula": "CH4O"
+        }]
+        
+        with patch('atct.api.request_json') as mock_request:
+            mock_request.return_value = mock_data
+            species_list = get_all_species()
+            
+            assert isinstance(species_list, list)
+            assert len(species_list) == 1
+            assert isinstance(species_list[0], Species)
+            assert species_list[0].name == "Methanol"
+            mock_request.assert_called_once()
 
 
 class TestSearchSpecies:
@@ -322,6 +435,34 @@ class TestCovariance:
             assert cov.labels == ["ΔH(A)", "ΔH(B)"]
             assert cov.units == "kJ/mol"
             assert cov.matrix == [[0.01, 0.005], [0.005, 0.02]]
+    
+    def test_get_species_covariance_matrix(self):
+        """Test covariance matrix retrieval for multiple species."""
+        mock_data = {
+            "species_ids": ["1", "2"],
+            "species_atctids": ["67-56-1*0", "67-56-1*500"],
+            "matrix": [[0.01, 0.005], [0.005, 0.02]],
+            "units": "kJ/mol"
+        }
+        
+        with patch('atct.api.request_json') as mock_request:
+            mock_request.return_value = mock_data
+            cov_matrix = get_species_covariance_matrix(atctids=["67-56-1*0", "67-56-1*500"])
+            
+            assert isinstance(cov_matrix, CovarianceMatrix)
+            assert cov_matrix.species_atctids == ["67-56-1*0", "67-56-1*500"]
+            assert cov_matrix.units == "kJ/mol"
+            assert cov_matrix.matrix == [[0.01, 0.005], [0.005, 0.02]]
+    
+    def test_get_species_covariance_matrix_no_params(self):
+        """Test covariance matrix with no parameters."""
+        with pytest.raises(ValueError, match="Either ids or atctids must be provided"):
+            get_species_covariance_matrix()
+    
+    def test_get_species_covariance_matrix_both_params(self):
+        """Test covariance matrix with both parameters."""
+        with pytest.raises(ValueError, match="Provide either ids or atctids, not both"):
+            get_species_covariance_matrix(ids=["1", "2"], atctids=["67-56-1*0", "67-56-1*500"])
 
 
 class TestModels:
@@ -334,14 +475,13 @@ class TestModels:
             "ATcT_ID": "67-56-1*0",
             "Name": "Methanol",
             "Formula": "CH4O",
-            "Delta_Hf_0K": "-201.0",
-            "Delta_Hf_298K": "-201.0",
-            "Delta_Hf298K_uncertainty": "0.1",
-            "unit": "kJ/mol",
-            "mass": "32.04",
-            "mass_uncertainty": "0.001",
+            "∆fH_0K": "-201.0",
+            "∆fH_298K": "-201.0",
+            "∆fH_298K_uncertainty": "0.1",
             "SMILES": "CO",
             "CASRN": "67-56-1",
+            "InChI": "InChI=1S/CH4O/c1-2/h2H,1H3",
+            "InChI_Key": "OKKJLVBELUTLKV-UHFFFAOYSA-N",
             "charge": 0,
             "XYZ": None
         }
@@ -355,11 +495,10 @@ class TestModels:
         assert species.delta_h_0k == "-201.0"
         assert species.delta_h_298k == "-201.0"
         assert species.delta_h_298k_uncertainty == "0.1"
-        assert species.unit == "kJ/mol"
-        assert species.mass == "32.04"
-        assert species.mass_uncertainty == "0.001"
         assert species.smiles == "CO"
         assert species.casrn == "67-56-1"
+        assert species.inchi == "InChI=1S/CH4O/c1-2/h2H,1H3"
+        assert species.inchi_key == "OKKJLVBELUTLKV-UHFFFAOYSA-N"
         assert species.charge == 0
         assert species.xyz is None
     
@@ -373,11 +512,10 @@ class TestModels:
             delta_h_0k="-201.0",
             delta_h_298k="-201.0",
             delta_h_298k_uncertainty="0.1",
-            unit="kJ/mol",
-            mass="32.04",
-            mass_uncertainty="0.001",
             smiles="CO",
             casrn="67-56-1",
+            inchi="InChI=1S/CH4O/c1-2/h2H,1H3",
+            inchi_key="OKKJLVBELUTLKV-UHFFFAOYSA-N",
             charge=0,
             xyz=None
         )
@@ -428,11 +566,10 @@ class TestModels:
             delta_h_0k=None,
             delta_h_298k=None,
             delta_h_298k_uncertainty=None,
-            unit=None,
-            mass=None,
-            mass_uncertainty=None,
             smiles=None,
             casrn=None,
+            inchi=None,
+            inchi_key=None,
             charge=None,
             xyz=None
         )
@@ -465,11 +602,10 @@ class TestReactionCalculations:
             delta_h_0k=None,
             delta_h_298k="-200.85",
             delta_h_298k_uncertainty="0.1",
-            unit="kJ/mol",
-            mass=None,
-            mass_uncertainty=None,
             smiles=None,
             casrn=None,
+            inchi=None,
+            inchi_key=None,
             charge=None,
             xyz=None
         )
@@ -497,9 +633,8 @@ class TestReactionCalculations:
             delta_h_0k=None,
             delta_h_298k="-200.85",
             delta_h_298k_uncertainty="0.1",
-            unit="kJ/mol",
-            mass=None,
-            mass_uncertainty=None,
+            inchi=None,
+            inchi_key=None,
             smiles=None,
             casrn=None,
             charge=None,
@@ -514,9 +649,8 @@ class TestReactionCalculations:
             delta_h_0k=None,
             delta_h_298k="0",
             delta_h_298k_uncertainty="exact",
-            unit="kJ/mol",
-            mass=None,
-            mass_uncertainty=None,
+            inchi=None,
+            inchi_key=None,
             smiles=None,
             casrn=None,
             charge=None,
@@ -543,9 +677,8 @@ class TestReactionCalculations:
             delta_h_0k=None,
             delta_h_298k="-200.85",
             delta_h_298k_uncertainty="0.1",
-            unit="kJ/mol",
-            mass=None,
-            mass_uncertainty=None,
+            inchi=None,
+            inchi_key=None,
             smiles=None,
             casrn=None,
             charge=None,
@@ -560,9 +693,8 @@ class TestReactionCalculations:
             delta_h_0k=None,
             delta_h_298k="0",
             delta_h_298k_uncertainty="exact",
-            unit="kJ/mol",
-            mass=None,
-            mass_uncertainty=None,
+            inchi=None,
+            inchi_key=None,
             smiles=None,
             casrn=None,
             charge=None,
@@ -595,9 +727,8 @@ class TestReactionCalculations:
             delta_h_0k=None,
             delta_h_298k="-200.85",
             delta_h_298k_uncertainty="0.1",
-            unit="kJ/mol",
-            mass=None,
-            mass_uncertainty=None,
+            inchi=None,
+            inchi_key=None,
             smiles=None,
             casrn=None,
             charge=None,
@@ -631,11 +762,10 @@ class TestPandasIO:
             delta_h_0k=None,
             delta_h_298k=None,
             delta_h_298k_uncertainty=None,
-            unit=None,
-            mass=None,
-            mass_uncertainty=None,
             smiles=None,
             casrn=None,
+            inchi=None,
+            inchi_key=None,
             charge=None,
             xyz=None
         )
@@ -666,8 +796,8 @@ class TestPandasIO:
     
     def test_as_dataframe_no_pandas(self):
         """Test DataFrame creation when pandas is not available."""
-        with patch('atct.api.pandas_io.pd', None):
-            with pytest.raises(ImportError, match="Install with `pyATcT\\[pandas\\]`"):
+        with patch('atct.api.pandas_io.PANDAS_AVAILABLE', False):
+            with pytest.raises(ImportError, match="pandas is required"):
                 as_dataframe([{"test": "data"}])
 
 

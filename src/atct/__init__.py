@@ -1,35 +1,46 @@
 from .api import (
     healthcheck,
     get_species,
+    get_species_by_atctid,
     get_species_by_casrn,
     get_species_by_inchi,
+    get_species_by_inchikey,
     get_species_by_smiles,
     get_species_by_formula,
     get_species_by_name,
     search_species,
+    get_species_covariance_matrix,
     get_species_covariance_by_ids,
     get_species_covariance_by_atctid,
+    get_species_simple,
+    get_all_species,
     create_reaction_calculator,
     calculate_reaction_enthalpy,
 )
-from .api.models import Species, Covariance2x2, Page, ReactionSpecies, ReactionResult, ReactionCalculator
+from .api.models import Species, CovarianceMatrix, Covariance2x2, Page, ReactionSpecies, ReactionResult, ReactionCalculator
 from .api.pandas_io import as_dataframe
-from .api.exceptions import ATCTError, NotFound, BadRequest, Unauthorized, ServerError, NetworkError
+from .api.exceptions import ATCTError, NotFound, BadRequest, Unauthorized, ServerError, NetworkError, TooManyRequests
 
 __all__ = [
     "healthcheck",
     "get_species",
+    "get_species_by_atctid",
     "get_species_by_casrn",
     "get_species_by_inchi",
+    "get_species_by_inchikey",
     "get_species_by_smiles",
     "get_species_by_formula",
     "get_species_by_name",
     "search_species",
+    "get_species_covariance_matrix",
     "get_species_covariance_by_ids",
     "get_species_covariance_by_atctid",
+    "get_species_simple",
+    "get_all_species",
     "create_reaction_calculator",
     "calculate_reaction_enthalpy",
     "Species",
+    "CovarianceMatrix",
     "Covariance2x2",
     "Page",
     "ReactionSpecies",
@@ -42,4 +53,5 @@ __all__ = [
     "Unauthorized",
     "ServerError",
     "NetworkError",
+    "TooManyRequests",
 ]

@@ -1,7 +1,7 @@
 """Test the data models."""
 
 import pytest
-from atct.api.models import Species, Covariance2x2, Page
+from atct.api.models import Species, CovarianceMatrix, Covariance2x2, Page
 
 
 def test_species_from_dict():
@@ -10,10 +10,12 @@ def test_species_from_dict():
         "ATcT_ID": "67-56-1*0",
         "Name": "Methanol",
         "Formula": "CH4O (g)",
-        "Delta_Hf_298K": "-201.0",
-        "Delta_Hf298K_uncertainty": "0.1",
+        "∆fH_298K": "-201.0",
+        "∆fH_298K_uncertainty": "0.1",
         "SMILES": "CO",
-        "mass": "32.04"
+        "CASRN": "67-56-1",
+        "InChI": "InChI=1S/CH4O/c1-2/h2H,1H3",
+        "InChI_Key": "OKKJLVBELUTLKV-UHFFFAOYSA-N"
     }
     
     species = Species.from_dict(data)
@@ -24,7 +26,9 @@ def test_species_from_dict():
     assert species.delta_h_298k == "-201.0"
     assert species.delta_h_298k_uncertainty == "0.1"
     assert species.smiles == "CO"
-    assert species.mass == "32.04"
+    assert species.casrn == "67-56-1"
+    assert species.inchi == "InChI=1S/CH4O/c1-2/h2H,1H3"
+    assert species.inchi_key == "OKKJLVBELUTLKV-UHFFFAOYSA-N"
 
 
 def test_species_from_dict_exact_uncertainty():
@@ -33,8 +37,8 @@ def test_species_from_dict_exact_uncertainty():
         "ATcT_ID": "67-56-1*0",
         "Name": "Methanol",
         "Formula": "CH4O (g)",
-        "Delta_Hf_298K": "-201.0",
-        "Delta_Hf298K_uncertainty": "exact"
+        "∆fH_298K": "-201.0",
+        "∆fH_298K_uncertainty": "exact"
     }
     
     species = Species.from_dict(data)
@@ -71,6 +75,40 @@ def test_covariance2x2_defaults():
     assert cov_matrix.matrix == [[0.01, 0.005], [0.005, 0.02]]
 
 
+def test_covariance_matrix_from_dict():
+    """Test CovarianceMatrix creation from API response."""
+    data = {
+        "species_ids": ["1", "2"],
+        "species_atctids": ["67-56-1*0", "67-56-1*500"],
+        "matrix": [[0.01, 0.005], [0.005, 0.02]],
+        "units": "kJ/mol"
+    }
+    
+    cov_matrix = CovarianceMatrix.from_dict(data)
+    
+    assert cov_matrix.species_ids == ["1", "2"]
+    assert cov_matrix.species_atctids == ["67-56-1*0", "67-56-1*500"]
+    assert cov_matrix.units == "kJ/mol"
+    assert cov_matrix.matrix == [[0.01, 0.005], [0.005, 0.02]]
+
+
+def test_covariance_matrix_to_dict():
+    """Test CovarianceMatrix serialization to dictionary."""
+    cov_matrix = CovarianceMatrix(
+        species_ids=["1", "2"],
+        species_atctids=["67-56-1*0", "67-56-1*500"],
+        matrix=[[0.01, 0.005], [0.005, 0.02]],
+        units="kJ/mol"
+    )
+    
+    data = cov_matrix.to_dict()
+    
+    assert data["species_ids"] == ["1", "2"]
+    assert data["species_atctids"] == ["67-56-1*0", "67-56-1*500"]
+    assert data["units"] == "kJ/mol"
+    assert data["matrix"] == [[0.01, 0.005], [0.005, 0.02]]
+
+
 def test_page_creation():
     """Test Page dataclass."""
     species1 = Species(
@@ -81,11 +119,10 @@ def test_page_creation():
         delta_h_0k=None,
         delta_h_298k=None,
         delta_h_298k_uncertainty=None,
-        unit=None,
-        mass=None,
-        mass_uncertainty=None,
         smiles=None,
         casrn=None,
+        inchi=None,
+        inchi_key=None,
         charge=None,
         xyz=None
     )
@@ -97,11 +134,10 @@ def test_page_creation():
         delta_h_0k=None,
         delta_h_298k=None,
         delta_h_298k_uncertainty=None,
-        unit=None,
-        mass=None,
-        mass_uncertainty=None,
         smiles=None,
         casrn=None,
+        inchi=None,
+        inchi_key=None,
         charge=None,
         xyz=None
     )
