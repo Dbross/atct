@@ -807,7 +807,7 @@ class TestIntegration:
     
     @pytest.mark.skipif(
         not (os.environ.get("ATCT_API_BASE_URL") or 
-             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1")),
+             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1/")),
         reason="ATCT_API_BASE_URL not set and not using production endpoint - skipping integration tests"
     )
     def test_real_healthcheck(self):
@@ -817,7 +817,7 @@ class TestIntegration:
     
     @pytest.mark.skipif(
         not (os.environ.get("ATCT_API_BASE_URL") or 
-             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1")),
+             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1/")),
         reason="ATCT_API_BASE_URL not set and not using production endpoint - skipping integration tests"
     )
     def test_real_get_species(self):
@@ -832,7 +832,7 @@ class TestIntegration:
     
     @pytest.mark.skipif(
         not (os.environ.get("ATCT_API_BASE_URL") or 
-             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1")),
+             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1/")),
         reason="ATCT_API_BASE_URL not set and not using production endpoint - skipping integration tests"
     )
     def test_real_search_species(self):
@@ -844,7 +844,7 @@ class TestIntegration:
     
     @pytest.mark.skipif(
         not (os.environ.get("ATCT_API_BASE_URL") or 
-             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1")),
+             (hasattr(settings, 'base_url') and settings.base_url == "https://atct.anl.gov/api/v1/")),
         reason="ATCT_API_BASE_URL not set and not using production endpoint - skipping integration tests"
     )
     def test_real_covariance(self):

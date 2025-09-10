@@ -22,6 +22,8 @@ from .api.models import Species, CovarianceMatrix, Covariance2x2, Page, Reaction
 from .api.pandas_io import as_dataframe
 from .api.exceptions import ATCTError, NotFound, BadRequest, Unauthorized, ServerError, NetworkError, TooManyRequests
 
+__version__ = "1.0.0"
+
 __all__ = [
     "healthcheck",
     "get_species",

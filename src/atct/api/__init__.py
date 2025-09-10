@@ -10,7 +10,7 @@ from .pandas_io import as_dataframe
 async def healthcheck_async() -> bool:
     """Async health check."""
     try:
-        data = await request_json_async("GET", f"{settings.base_url}/health/")
+        data = await request_json_async("GET", settings.url("health/"))
         return bool(data.get("ok", True))
     except Exception:
         return False
@@ -36,7 +36,7 @@ async def get_species_by_atctid_async(atctid: str, *, expand_xyz: bool = False) 
     params: Dict[str, Any] = {"atctid": atctid}
     if expand_xyz:
         params["expand_xyz"] = "1"
-    data = await request_json_async("GET", f"{settings.base_url}/species/get/by-atctid/", params=params)
+    data = await request_json_async("GET", settings.url("species/get/by-atctid/"), params=params)
     # API returns list, take first item
     if isinstance(data, list) and len(data) > 0:
         return Species.from_dict(data[0])
@@ -254,7 +254,7 @@ def get_species_by_name(name: str, *, default_permissive_search: bool = False, l
 # -------- species: search (paged) --------
 async def search_species_async(q: str, *, limit: int = 50, offset: int = 0) -> Page:
     """Async search species by query (name, formula, SMILES, ATcT ID, or CASRN). Returns paged results."""
-    data = await request_json_async("GET", f"{settings.base_url}/species/search/", params={"q": q, "limit": limit, "offset": offset})
+    data = await request_json_async("GET", settings.url("species/search/"), params={"q": q, "limit": limit, "offset": offset})
     if isinstance(data, list):
         return Page(items=[Species.from_dict(x) for x in data], total=len(data), limit=limit, offset=offset)
     else:
@@ -352,7 +352,7 @@ def get_species_covariance_by_ids(a_id: int, b_id: int, block: bool = False) -> 
 
 async def get_species_covariance_by_atctid_async(a_atctid: str, b_atctid: str) -> Covariance2x2:
     """Async legacy function for 2x2 covariance matrix by ATcT IDs."""
-    data = await request_json_async("GET", f"{settings.base_url}/covariance/species/", params={"atctids": f"{a_atctid},{b_atctid}"})
+    data = await request_json_async("GET", settings.url("covariance/species/"), params={"atctids": f"{a_atctid},{b_atctid}"})
     return Covariance2x2.from_dict(data)
 
 def get_species_covariance_by_atctid(a_atctid: str, b_atctid: str, block: bool = False) -> Union[Covariance2x2, asyncio.Task]:
