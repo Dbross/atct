@@ -798,7 +798,7 @@ class TestPandasIO:
     def test_as_dataframe_no_pandas(self):
         """Test DataFrame creation when pandas is not available."""
         with patch('atct.api.pandas_io.pd', None):
-            with pytest.raises(ImportError, match="Install with `pyATcT\\[pandas\\]` for DataFrame support"):
+            with pytest.raises(ImportError, match="Install with `atct\\[pandas\\]` for DataFrame support"):
                 as_dataframe([{"test": "data"}])
 
 

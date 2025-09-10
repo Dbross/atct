@@ -1,4 +1,4 @@
-# pyATcT - Pythonic ATcT v1 API Client
+# atct - Pythonic ATcT v1 API Client
 
 A comprehensive Python client for the ATcT v1 API with advanced reaction enthalpy calculation capabilities.
 

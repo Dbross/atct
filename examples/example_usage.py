@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Example usage of the pyATcT library."""
+"""Example usage of the atct library."""
 
 import os
 from atct import (
@@ -18,8 +18,8 @@ from atct import (
 )
 
 def main():
-    """Demonstrate pyATcT functionality."""
-    print("=== pyATcT Example Usage ===\n")
+    """Demonstrate atct functionality."""
+    print("=== atct Example Usage ===\n")
     
     # Set API base URL (optional - defaults to production)
     # os.environ["ATCT_API_BASE_URL"] = "https://atct.anl.gov/api/v1"
@@ -134,7 +134,7 @@ def main():
         print("   First few rows:")
         print(df[['ATcT_ID', 'Name', 'Formula', 'SMILES']].to_string(index=False))
     except ImportError:
-        print("   Pandas not available. Install with: pip install pyATcT[pandas]")
+        print("   Pandas not available. Install with: pip install atct[pandas]")
     except Exception as e:
         print(f"   Error creating DataFrame: {e}")
 

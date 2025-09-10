@@ -7,7 +7,7 @@ except Exception:
 
 def as_dataframe(items: Iterable[Any]):
     if pd is None:
-        raise ImportError("Install with `pyATcT[pandas]` for DataFrame support.")
+        raise ImportError("Install with `atct[pandas]` for DataFrame support.")
     rows = []
     for x in items:
         if hasattr(x, "to_dict"):

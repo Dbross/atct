@@ -1,11 +1,11 @@
-# pyATcT Examples
+# atct Examples
 
-This directory contains example scripts demonstrating how to use the pyATcT library.
+This directory contains example scripts demonstrating how to use the atct library.
 
 ## Examples
 
 ### `example_usage.py`
-Basic usage examples of the pyATcT library, including:
+Basic usage examples of the atct library, including:
 - Health check
 - Species retrieval by ATcT ID
 - Species search
@@ -25,7 +25,7 @@ Advanced reaction enthalpy calculation examples, including:
 
 ## Running the Examples
 
-Make sure you have the pyATcT package installed and the environment variable set:
+Make sure you have the atct package installed and the environment variable set:
 
 ```bash
 # Install the package
@@ -41,7 +41,7 @@ python examples/example_reaction_calculations.py
 
 ## Available Functions
 
-The pyATcT library provides the following main functions:
+The atct library provides the following main functions:
 
 ### Species Retrieval
 - `get_species(atctid)` - Get species by ATcT ID
@@ -74,5 +74,5 @@ The pyATcT library provides the following main functions:
 
 Install with optional dependencies:
 ```bash
-pip install pyATcT[pandas]
+pip install atct[pandas]
 ```
