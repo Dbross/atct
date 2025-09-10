@@ -23,13 +23,14 @@ async def main():
     print("1. Methanol Combustion Reaction:")
     print("   CH3OH + 1.5 O2 → CO2 + 2 H2O")
     print()
-    
+
     species_data = {
-        '67-56-1*0': -1.0,    # CH3OH (reactant)
-        '7727-37-9*0': -1.5,  # O2 (reactant) 
-        '124-38-9*0': 1.0,    # CO2 (product)
-        '7732-18-5*500': 2.0    # H2O (product)
+    '67-56-1*0':  -1.0,   # CH3OH (g)
+    '7782-44-7*0': -1.5,  # O2 (g)  <-- fixed
+    '124-38-9*0':  1.0,   # CO2 (g)
+    '7732-18-5*500': 2.0  # H2O (cr,l)
     }
+    
     
     try:
         # Calculate using different methods
@@ -60,9 +61,9 @@ async def main():
     print()
     
     original_species_data = {
-        '3315-37-5*1': -1.0,  # CH (reactant)
-        '7727-37-9*0': -1.0,  # N2 (reactant)
-        '69967-71-1*2': 1.0   # HC(NN) (product)
+        '3315-37-5*1': -1.0,  # CH (g, A2Δ)
+        '7727-37-9*0': -1.0,  # N2 (g)
+        '69967-71-1*2':  1.0  # HC(NN) (g, 2A')
     }
     
     try:
@@ -100,7 +101,7 @@ async def main():
     
     water_formation_data = {
         '1333-74-0*0': -1.0,  # H2 (reactant)
-        '7727-37-9*0': -0.5,  # O2 (reactant)
+        '7782-44-7*0': -0.5,  # O2 (reactant)
         '7732-18-5*0': 1.0    # H2O (product)
     }
     
@@ -158,7 +159,6 @@ async def main():
     benzene_ionization_data = {
         '71-43-2*0': -1.0,      # C6H6 (reactant)
         '34504-50-2*0': 1.0,    # C6H6+ (product)
-        '183748-02-9*0': 1.0    # e- (product)
     }
     
     try:

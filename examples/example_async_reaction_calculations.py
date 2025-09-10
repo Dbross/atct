@@ -8,7 +8,8 @@ from atct import (
     get_species,
     calculate_reaction_enthalpy,
     get_species_covariance_by_atctid,
-    get_species_covariance_matrix
+    get_species_covariance_matrix,
+    create_reaction_calculator
 )
 from atct import ReactionSpecies, ReactionResult
 
@@ -21,49 +22,57 @@ async def main():
     
     # Define all reactions to calculate
     reactions = {
-        "Methanol Combustion": {
-            "equation": "CH3OH + 1.5 O2 → CO2 + 2 H2O",
-            "species_data": {
-                '67-56-1*0': -1.0,    # CH3OH (reactant)
-                '7727-37-9*0': -1.5,  # O2 (reactant) 
-                '124-38-9*0': 1.0,    # CO2 (product)
-                '7732-18-5*500': 2.0    # H2O (product)
-            }
-        },
-        "CH + N2 → HC(NN)": {
-            "equation": "CH + N2 → HC(NN)",
-            "species_data": {
-                '3315-37-5*1': -1.0,  # CH (reactant)
-                '7727-37-9*0': -1.0,  # N2 (reactant)
-                '69967-71-1*2': 1.0   # HC(NN) (product)
-            }
-        },
-        "Water Formation": {
-            "equation": "H2 + 0.5 O2 → H2O",
-            "species_data": {
-                '1333-74-0*0': -1.0,  # H2 (reactant)
-                '7727-37-9*0': -0.5,  # O2 (reactant)
-                '7732-18-5*0': 1.0    # H2O (product)
-            }
-        },
-        "Benzene Combustion": {
-            "equation": "C6H6 + 7.5 O2 → 6 CO2 + 3 H2O",
-            "species_data": {
-                '71-43-2*0': -1.0,     # C6H6 (reactant)
-                '7782-44-7*0': -7.5,   # O2 (reactant)
-                '124-38-9*0': 6.0,     # CO2 (product)
-                '7732-18-5*500': 3.0     # H2O (product)
-            }
-        },
-        "Benzene Ionization": {
-            "equation": "C6H6 → C6H6+ + e-",
-            "species_data": {
-                '71-43-2*0': -1.0,      # C6H6 (reactant)
-                '34504-50-2*0': 1.0,    # C6H6+ (product)
-                '183748-02-9*0': 1.0    # e- (product)
-            }
+    "Methanol Combustion": {
+        "equation": "CH3OH + 1.5 O2 → CO2 + 2 H2O",
+        "species_data": {
+            '67-56-1*0': -1.0,     # CH3OH (g)
+            '7782-44-7*0': -1.5,   # O2 (g)
+            '124-38-9*0':  1.0,    # CO2 (g)
+            '7732-18-5*500': 2.0   # H2O (cr,l)
         }
+    },
+
+    "CH + N2 → HC(NN)": {
+        "equation": "CH + N2 → HC(NN)",
+        "species_data": {
+            '3315-37-5*1': -1.0,   # CH (g, A2Δ)
+            '7727-37-9*0': -1.0,   # N2 (g)   ← fixed (was O2)
+            '69967-71-1*2': 1.0    # HC(NN) (g, 2A')
+        }
+    },
+
+    "Water Formation": {
+        "equation": "H2 + 0.5 O2 → H2O",
+        "species_data": {
+            '1333-74-0*0': -1.0,   # H2 (g)
+            '7782-44-7*0': -0.5,   # O2 (g)
+            '7732-18-5*0':  1.0    # H2O (g)
+        }
+    },
+
+    "Benzene Combustion": {
+        "equation": "C6H6 + 7.5 O2 → 6 CO2 + 3 H2O",
+        "species_data": {
+            '71-43-2*0':   -1.0,   # C6H6 (g)
+            '7782-44-7*0': -7.5,   # O2 (g)
+            '124-38-9*0':   6.0,   # CO2 (g)
+            '7732-18-5*500': 3.0   # H2O (cr,l)
+        }
+    },
+
+    # Benzene Ionization:
+    # Your file has the benzene cation (34504-50-2*0) but I cannot find an electron species entry.
+    # If you do have electron (e−) in your thermochemistry table, add it here as +1.0 on products.
+    "Benzene Ionization": {
+        "equation": "C6H6 → C6H6+ + e−",
+        "species_data": {
+            '71-43-2*0':     -1.0,  # C6H6 (g)
+            '34504-50-2*0':   1.0,  # C6H6+ (g)
+            # '???-??-?*?':   1.0,  # e− (if present in your dataset; not found in download.json)
+        }
+    },
     }
+
     
     print("Firing off all requests concurrently...")
     print("(This may take a moment as we're making many API calls)\n")
@@ -86,10 +95,15 @@ async def main():
             'conventional': calculate_reaction_enthalpy(reaction_data["species_data"], 'conventional')
         }
     
+    # Create tasks for reaction calculators (for method comparison)
+    calculator_tasks = {}
+    for reaction_name, reaction_data in reactions.items():
+        calculator_tasks[reaction_name] = create_reaction_calculator(reaction_data["species_data"])
+    
     # Create tasks for covariance examples
     covariance_tasks = {
         'methanol_phases': get_species_covariance_by_atctid('67-56-1*500', '67-56-1*0'),
-        'methanol_combustion_matrix': get_species_covariance_matrix(atctids=['67-56-1*0', '7727-37-9*0', '124-38-9*0', '7732-18-5*500'])
+        'methanol_combustion_matrix': get_species_covariance_matrix(atctids=['67-56-1*0', '7782-44-7*0', '124-38-9*0', '7732-18-5*500'])
     }
     
     # Wait for ALL requests to complete
@@ -110,6 +124,11 @@ async def main():
             tasks['conventional'], 
             return_exceptions=True
         )
+    
+    # Gather all calculator results
+    calculator_results = {}
+    for reaction_name, task in calculator_tasks.items():
+        calculator_results[reaction_name] = await task
     
     # Gather covariance results
     covariance_results = await asyncio.gather(
@@ -155,13 +174,14 @@ async def main():
                 print(f"   Conventional method:   {conv_result}")
             print()
             
-            # Display method comparison (simplified)
-            if not isinstance(cov_result, Exception) and not isinstance(conv_result, Exception):
-                diff_unc = abs(cov_result.uncertainty - conv_result.uncertainty)
-                ref_unc = max(cov_result.uncertainty, conv_result.uncertainty)
-                significance_ratio = diff_unc / ref_unc if ref_unc > 0 else 0
-                print(f"   Difference in uncertainty: {diff_unc:.6f} kJ/mol")
-                print(f"   Statistical significance: {significance_ratio:.1%} of reference uncertainty")
+            # Display method comparison
+            calculator = calculator_results[reaction_name]
+            if isinstance(calculator, Exception):
+                print(f"   Calculator error: {calculator}")
+            else:
+                comparison = calculator.compare_methods()
+                print(f"   Difference in uncertainty: {comparison['difference']:.6f} kJ/mol")
+                print(f"   Statistical significance: {comparison['significance']:.1%} of reference uncertainty")
             print()
             
         except Exception as e:
