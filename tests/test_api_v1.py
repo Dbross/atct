@@ -33,17 +33,17 @@ class TestHealthCheck:
     
     def test_healthcheck_success(self):
         """Test successful health check."""
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = {"ok": True, "service": "ATcT API"}
-            result = healthcheck()
+            result = healthcheck(block=True)
             assert result is True
             mock_request.assert_called_once()
     
     def test_healthcheck_failure(self):
         """Test health check failure."""
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.side_effect = Exception("Network error")
-            result = healthcheck()
+            result = healthcheck(block=True)
             assert result is False
 
 
@@ -68,9 +68,9 @@ class TestGetSpecies:
             "XYZ": None
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            species = get_species("67-56-1*0")
+            species = get_species("67-56-1*0", block=True)
             
             assert isinstance(species, Species)
             assert species.atct_id == "67-56-1*0"
@@ -92,9 +92,9 @@ class TestGetSpecies:
             "XYZ": ["C 0.0 0.0 0.0", "O 1.4 0.0 0.0", "H 0.0 1.0 0.0", "H 0.0 -1.0 0.0", "H 0.0 0.0 1.0", "H 0.0 0.0 -1.0"]
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            species = get_species("67-56-1*0", expand_xyz=True)
+            species = get_species("67-56-1*0", expand_xyz=True, block=True)
             
             assert species.atct_id == "67-56-1*0"
             assert isinstance(species.xyz, list)
@@ -116,9 +116,9 @@ class TestGetSpecies:
             "XYZ": None
         }]
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            species = get_species_by_atctid("67-56-1*0")
+            species = get_species_by_atctid("67-56-1*0", block=True)
             
             assert isinstance(species, Species)
             assert species.atct_id == "67-56-1*0"
@@ -143,9 +143,9 @@ class TestGetSpeciesBy:
             "offset": 0
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            page = get_species_by_casrn("67-56-1")
+            page = get_species_by_casrn("67-56-1", block=True)
             
             assert isinstance(page, Page)
             assert len(page.items) == 1
@@ -167,9 +167,9 @@ class TestGetSpeciesBy:
             "offset": 0
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            page = get_species_by_inchi("1S/CH4O/c1-2/h2H,1H3")
+            page = get_species_by_inchi("1S/CH4O/c1-2/h2H,1H3", block=True)
             
             assert isinstance(page, Page)
             assert len(page.items) == 1
@@ -189,9 +189,9 @@ class TestGetSpeciesBy:
             "offset": 0
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            page = get_species_by_smiles("CO")
+            page = get_species_by_smiles("CO", block=True)
             
             assert isinstance(page, Page)
             assert len(page.items) == 1
@@ -211,9 +211,9 @@ class TestGetSpeciesBy:
             "offset": 0
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            page = get_species_by_inchikey("OKKJLVBELUTLKV-UHFFFAOYSA-N")
+            page = get_species_by_inchikey("OKKJLVBELUTLKV-UHFFFAOYSA-N", block=True)
             
             assert isinstance(page, Page)
             assert len(page.items) == 1
@@ -232,9 +232,9 @@ class TestGetSpeciesBy:
             "offset": 0
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            page = get_species_by_formula("CH4O")
+            page = get_species_by_formula("CH4O", block=True)
             
             assert isinstance(page, Page)
             assert len(page.items) == 1
@@ -253,9 +253,9 @@ class TestGetSpeciesBy:
             "offset": 0
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            page = get_species_by_formula("CH4O", phase="g")
+            page = get_species_by_formula("CH4O", phase="g", block=True)
             
             assert isinstance(page, Page)
             # Verify phase parameter was passed
@@ -276,9 +276,9 @@ class TestGetSpeciesBy:
             "offset": 0
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            page = get_species_by_name("Methanol")
+            page = get_species_by_name("Methanol", block=True)
             
             assert isinstance(page, Page)
             assert len(page.items) == 1
@@ -297,9 +297,9 @@ class TestSimpleAPI:
             "SMILES": "CO"
         }]
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            species = get_species_simple(smiles="CO")
+            species = get_species_simple(smiles="CO", block=True)
             
             assert isinstance(species, Species)
             assert species.atct_id == "67-56-1*0"
@@ -314,9 +314,9 @@ class TestSimpleAPI:
             "Formula": "CH4O"
         }]
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            species = get_species_simple(name="methanol")
+            species = get_species_simple(name="methanol", block=True)
             
             assert isinstance(species, Species)
             assert species.name == "Methanol"
@@ -325,7 +325,7 @@ class TestSimpleAPI:
     def test_get_species_simple_no_params(self):
         """Test simple API with no parameters."""
         with pytest.raises(ValueError, match="At least one parameter must be provided"):
-            get_species_simple()
+            get_species_simple(block=True)
     
     def test_get_all_species(self):
         """Test get all species."""
@@ -335,9 +335,9 @@ class TestSimpleAPI:
             "Formula": "CH4O"
         }]
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            species_list = get_all_species()
+            species_list = get_all_species(block=True)
             
             assert isinstance(species_list, list)
             assert len(species_list) == 1
@@ -369,9 +369,9 @@ class TestSearchSpecies:
             "offset": 0
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            page = search_species("methanol")
+            page = search_species("methanol", block=True)
             
             assert isinstance(page, Page)
             assert len(page.items) == 2
@@ -391,9 +391,9 @@ class TestSearchSpecies:
             "offset": 5
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            page = search_species("methanol", limit=5, offset=5)
+            page = search_species("methanol", limit=5, offset=5, block=True)
             
             assert page.limit == 5
             assert page.offset == 5
@@ -411,9 +411,9 @@ class TestCovariance:
             "matrix": [[0.01, 0.005], [0.005, 0.02]]
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            cov = get_species_covariance_by_ids(500, 0)
+            cov = get_species_covariance_by_ids(500, 0, block=True)
             
             assert isinstance(cov, Covariance2x2)
             assert cov.labels == ["ΔH(A)", "ΔH(B)"]
@@ -428,9 +428,9 @@ class TestCovariance:
             "matrix": [[0.01, 0.005], [0.005, 0.02]]
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            cov = get_species_covariance_by_atctid("67-56-1*500", "67-56-1*0")
+            cov = get_species_covariance_by_atctid("67-56-1*500", "67-56-1*0", block=True)
             
             assert isinstance(cov, Covariance2x2)
             assert cov.labels == ["ΔH(A)", "ΔH(B)"]
@@ -446,9 +446,9 @@ class TestCovariance:
             "units": "kJ/mol"
         }
         
-        with patch('atct.api.request_json') as mock_request:
+        with patch('atct.api.request_json_async') as mock_request:
             mock_request.return_value = mock_data
-            cov_matrix = get_species_covariance_matrix(atctids=["67-56-1*0", "67-56-1*500"])
+            cov_matrix = get_species_covariance_matrix(atctids=["67-56-1*0", "67-56-1*500"], block=True)
             
             assert isinstance(cov_matrix, CovarianceMatrix)
             assert cov_matrix.species_atctids == ["67-56-1*0", "67-56-1*500"]
@@ -458,12 +458,12 @@ class TestCovariance:
     def test_get_species_covariance_matrix_no_params(self):
         """Test covariance matrix with no parameters."""
         with pytest.raises(ValueError, match="Either ids or atctids must be provided"):
-            get_species_covariance_matrix()
+            get_species_covariance_matrix(block=True)
     
     def test_get_species_covariance_matrix_both_params(self):
         """Test covariance matrix with both parameters."""
         with pytest.raises(ValueError, match="Provide either ids or atctids, not both"):
-            get_species_covariance_matrix(ids=["1", "2"], atctids=["67-56-1*0", "67-56-1*500"])
+            get_species_covariance_matrix(ids=["1", "2"], atctids=["67-56-1*0", "67-56-1*500"], block=True)
 
 
 class TestModels:
@@ -812,7 +812,7 @@ class TestIntegration:
     )
     def test_real_healthcheck(self):
         """Test real health check against API."""
-        result = healthcheck()
+        result = healthcheck(block=True)
         assert isinstance(result, bool)
     
     @pytest.mark.skipif(
@@ -822,7 +822,7 @@ class TestIntegration:
     )
     def test_real_get_species(self):
         """Test real species retrieval."""
-        species = get_species("67-56-1*0")
+        species = get_species("67-56-1*0", block=True)
         assert isinstance(species, Species)
         assert species.atct_id == "67-56-1*0"
         assert species.name == "Methanol"
@@ -837,7 +837,7 @@ class TestIntegration:
     )
     def test_real_search_species(self):
         """Test real species search."""
-        page = search_species("methanol")
+        page = search_species("methanol", block=True)
         assert isinstance(page, Page)
         assert len(page.items) > 0
         assert all(isinstance(item, Species) for item in page.items)
@@ -849,7 +849,7 @@ class TestIntegration:
     )
     def test_real_covariance(self):
         """Test real covariance retrieval."""
-        cov = get_species_covariance_by_atctid("67-56-1*500", "67-56-1*0")
+        cov = get_species_covariance_by_atctid("67-56-1*500", "67-56-1*0", block=True)
         assert isinstance(cov, Covariance2x2)
         assert len(cov.labels) == 2
         assert len(cov.matrix) == 2

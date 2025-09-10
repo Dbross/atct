@@ -205,7 +205,8 @@ class ReactionCalculator:
                     # Get covariance between species i and j
                     cov_data = get_species_covariance_by_atctid(
                         self.reaction_species[i].species.atct_id,
-                        self.reaction_species[j].species.atct_id
+                        self.reaction_species[j].species.atct_id,
+                        block=True
                     )
                     # The covariance is the off-diagonal element of the 2x2 matrix
                     covariance = cov_data.matrix[0][1]  # or [1][0], they should be the same
