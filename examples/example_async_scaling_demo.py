@@ -37,7 +37,6 @@ async def main():
     # Aromatics (gas-phase products here)
     "Benzene Formation":   {'7440-44-0*500': -6.0,'1333-74-0*0': -3.0,'71-43-2*0': 1.0},           # 6 C + 3 H2 -> C6H6
     "Toluene Formation":   {'7440-44-0*500': -7.0,'1333-74-0*0': -4.0,'108-88-3*0': 1.0},          # 7 C + 4 H2 -> C7H8
-    "Xylene Formation":    {'7440-44-0*500': -8.0,'1333-74-0*0': -5.0,'106-42-3*0': 1.0},          # 8 C + 5 H2 -> C8H10 (p-xylene)
     "Naphthalene Formation":{'7440-44-0*500': -10.0,'1333-74-0*0': -4.0,'91-20-3*0': 1.0},         # 10 C + 2 H2 -> C10H8
     }
 
@@ -94,22 +93,37 @@ async def main():
         reaction_results[reaction_name] = (cov_result, conv_result)
         result_idx += 2
     
-    # Display some results
-    print("\nSample results:")
+    # Display results
+    print("\nResults:")
     successful_count = 0
-    for i, (reaction_name, (cov_result, conv_result)) in enumerate(reaction_results.items()):
-        if not isinstance(cov_result, Exception) and not isinstance(conv_result, Exception):
+    failed_reactions = []
+    
+    for reaction_name, (cov_result, conv_result) in reaction_results.items():
+        cov_success = not isinstance(cov_result, Exception)
+        conv_success = not isinstance(conv_result, Exception)
+        
+        if cov_success and conv_success:
             successful_count += 1
-            print(f"{successful_count}. {reaction_name}:")
-            print(f"   Covariance: {cov_result}")
-            print(f"   Conventional: {conv_result}")
-            print()
-            if successful_count >= 5:  # Show first 5 successful results
-                break
+            if successful_count <= 5:  # Show first 5 successful results
+                print(f"{successful_count}. {reaction_name}:")
+                print(f"   Covariance: {cov_result}")
+                print(f"   Conventional: {conv_result}")
+                print()
         else:
-            print(f"Failed: {reaction_name} - Cov: {type(cov_result).__name__}, Conv: {type(conv_result).__name__}")
+            failed_reactions.append((reaction_name, cov_result, conv_result))
+            print(f"Failed: {reaction_name} - Cov: {type(cov_result).__name__ if not cov_success else 'Success'}, Conv: {type(conv_result).__name__ if not conv_success else 'Success'}")
     
     print(f"\nSuccessful reactions: {successful_count}/{len(reaction_results)}")
+    
+    # Show detailed error information for failed reactions
+    if len(failed_reactions)>0:
+        print(f"\nDetailed error information for {len(failed_reactions)} failed reactions:")
+        for reaction_name, cov_result, conv_result in failed_reactions:
+            print(f"\n{reaction_name}:")
+            if isinstance(cov_result, Exception):
+                print(f"  Covariance error: {type(cov_result).__name__}: {str(cov_result)}")
+            if isinstance(conv_result, Exception):
+                print(f"  Conventional error: {type(conv_result).__name__}: {str(conv_result)}")
     
     print(f"=== Async Scaling Demo Complete ===")
     print(f"Processed {len(reactions)} reactions with {len(all_tasks)} total API requests")
