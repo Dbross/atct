@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Example usage of ATcT reaction enthalpy calculations."""
 
+import asyncio
 import os
 from atct import (
     get_species,
@@ -11,7 +12,7 @@ from atct import (
 )
 from atct import ReactionSpecies, ReactionResult, ReactionCalculator
 
-def main():
+async def main():
     """Demonstrate reaction enthalpy calculations."""
     print("=== ATcT Reaction Enthalpy Calculations ===\n")
     
@@ -34,15 +35,15 @@ def main():
         # Calculate using different methods
         print("   Calculating reaction enthalpy...")
         
-        cov_result = calculate_reaction_enthalpy(species_data, 'covariance')
-        conv_result = calculate_reaction_enthalpy(species_data, 'conventional')
+        cov_result = await calculate_reaction_enthalpy(species_data, 'covariance')
+        conv_result = await calculate_reaction_enthalpy(species_data, 'conventional')
         
         print(f"   Covariance method:     {cov_result}")
         print(f"   Conventional method:   {conv_result}")
         print()
         
         # Compare methods
-        calculator = create_reaction_calculator(species_data)
+        calculator = await create_reaction_calculator(species_data)
         comparison = calculator.compare_methods()
         
         print(f"   Difference in uncertainty: {comparison['difference']:.6f} kJ/mol")
@@ -67,17 +68,17 @@ def main():
     try:
         print("   Species data:")
         for atct_id, coeff in original_species_data.items():
-            species = get_species(atct_id)
+            species = await get_species(atct_id)
             print(f"   {species.name} ({atct_id}): {species.delta_h_298k} ± {species.delta_h_298k_uncertainty} kJ/mol")
         print()
         
         # Calculate reaction enthalpy
-        result = calculate_reaction_enthalpy(original_species_data, 'covariance')
+        result = await calculate_reaction_enthalpy(original_species_data, 'covariance')
         print(f"   Reaction enthalpy: {result}")
         print()
         
         # Show method comparison
-        calculator = create_reaction_calculator(original_species_data)
+        calculator = await create_reaction_calculator(original_species_data)
         comparison = calculator.compare_methods()
         
         print("   Method comparison:")
@@ -106,11 +107,11 @@ def main():
     try:
         print("   Species data:")
         for atct_id, coeff in water_formation_data.items():
-            species = get_species(atct_id)
+            species = await get_species(atct_id)
             print(f"   {species.name} ({atct_id}): {species.delta_h_298k} ± {species.delta_h_298k_uncertainty} kJ/mol")
         print()
         
-        result = calculate_reaction_enthalpy(water_formation_data, 'covariance')
+        result = await calculate_reaction_enthalpy(water_formation_data, 'covariance')
         print(f"   Reaction enthalpy: {result}")
         print()
         
@@ -133,13 +134,13 @@ def main():
     try:
         print("   Species data:")
         for atct_id, coeff in benzene_combustion_data.items():
-            species = get_species(atct_id)
+            species = await get_species(atct_id)
             print(f"   {species.name} ({atct_id}): {species.delta_h_298k} ± {species.delta_h_298k_uncertainty} kJ/mol")
         print()
         
         # Calculate using different methods
-        cov_result = calculate_reaction_enthalpy(benzene_combustion_data, 'covariance')
-        conv_result = calculate_reaction_enthalpy(benzene_combustion_data, 'conventional')
+        cov_result = await calculate_reaction_enthalpy(benzene_combustion_data, 'covariance')
+        conv_result = await calculate_reaction_enthalpy(benzene_combustion_data, 'conventional')
         
         print(f"   Covariance method:     {cov_result}")
         print(f"   Conventional method:   {conv_result}")
@@ -163,13 +164,13 @@ def main():
     try:
         print("   Species data:")
         for atct_id, coeff in benzene_ionization_data.items():
-            species = get_species(atct_id)
+            species = await get_species(atct_id)
             print(f"   {species.name} ({atct_id}): {species.delta_h_298k} ± {species.delta_h_298k_uncertainty} kJ/mol")
         print()
         
         # Calculate using different methods
-        cov_result = calculate_reaction_enthalpy(benzene_ionization_data, 'covariance')
-        conv_result = calculate_reaction_enthalpy(benzene_ionization_data, 'conventional')
+        cov_result = await calculate_reaction_enthalpy(benzene_ionization_data, 'covariance')
+        conv_result = await calculate_reaction_enthalpy(benzene_ionization_data, 'conventional')
         
         print(f"   Covariance method:     {cov_result}")
         print(f"   Conventional method:   {conv_result}")
@@ -184,7 +185,7 @@ def main():
     print("   Getting covariance between methanol phases...")
     
     try:
-        cov = get_species_covariance_by_atctid('67-56-1*500', '67-56-1*0')
+        cov = await get_species_covariance_by_atctid('67-56-1*500', '67-56-1*0')
         print(f"   Covariance matrix: {cov.matrix}")
         print(f"   Labels: {cov.labels}")
         print(f"   Units: {cov.units}")
@@ -201,7 +202,7 @@ def main():
     try:
         # Get all species involved in methanol combustion
         reaction_atctids = ['67-56-1*0', '7727-37-9*0', '124-38-9*0', '7732-18-5*500']
-        cov_matrix = get_species_covariance_matrix(atctids=reaction_atctids)
+        cov_matrix = await get_species_covariance_matrix(atctids=reaction_atctids)
         print(f"   Full covariance matrix shape: {len(cov_matrix.matrix)}x{len(cov_matrix.matrix[0])}")
         print(f"   Species ATcT IDs: {cov_matrix.species_atctids}")
         print(f"   Units: {cov_matrix.units}")
@@ -215,4 +216,4 @@ def main():
     print("=== All examples completed! ===")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

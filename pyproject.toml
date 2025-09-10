@@ -19,7 +19,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Chemistry",
 ]
 
-dependencies = []
+dependencies = ["httpx>=0.25.0"]
 
 [project.optional-dependencies]
 pandas = ["pandas>=2.0"]
