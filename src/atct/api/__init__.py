@@ -292,19 +292,125 @@ async def get_species_covariance_matrix_async(ids: Optional[List[str]] = None, a
         
     Note:
         Either ids or atctids must be provided (minimum 2 species required)
+        For large requests (>25 species), automatically uses batch processing
     """
     if not ids and not atctids:
         raise ValueError("Either ids or atctids must be provided")
     if ids and atctids:
         raise ValueError("Provide either ids or atctids, not both")
     
+    # Determine the list of identifiers and count
+    identifier_list = ids if ids else atctids
+    count = len(identifier_list)
+    
+    # For large requests, use manual batching with regular endpoint
+    if count > 25:
+        if atctids:
+            # Process in batches of 25 using the regular endpoint
+            batch_size = 25
+            all_covariance_data = []
+            
+            for i in range(0, count, batch_size):
+                batch = atctids[i:i + batch_size]
+                batch_num = i // batch_size + 1
+                
+                try:
+                    batch_data = await request_json_async("GET", settings.url("covariance/species/"), 
+                                                        params={"atctids": ",".join(batch)})
+                    if batch_data:
+                        all_covariance_data.append(batch_data)
+                        print(f"✓ Batch {batch_num}: {len(batch)} species")
+                except Exception as e:
+                    # If batch fails, try smaller sub-batches
+                    print(f"✗ Batch {batch_num} failed: {e}")
+                    print(f"  Trying smaller sub-batches for batch {batch_num}...")
+                    
+                    # Try sub-batches of 10 species each
+                    sub_batch_size = 10
+                    for j in range(0, len(batch), sub_batch_size):
+                        sub_batch = batch[j:j + sub_batch_size]
+                        sub_batch_num = j // sub_batch_size + 1
+                        
+                        try:
+                            sub_batch_data = await request_json_async("GET", settings.url("covariance/species/"), 
+                                                                    params={"atctids": ",".join(sub_batch)})
+                            if sub_batch_data:
+                                all_covariance_data.append(sub_batch_data)
+                                print(f"  ✓ Sub-batch {batch_num}.{sub_batch_num}: {len(sub_batch)} species")
+                        except Exception as sub_e:
+                            print(f"  ✗ Sub-batch {batch_num}.{sub_batch_num} failed: {sub_e}")
+                            # Try individual species as last resort
+                            for k, single_atctid in enumerate(sub_batch):
+                                try:
+                                    single_data = await request_json_async("GET", settings.url("covariance/species/"), 
+                                                                          params={"atctids": single_atctid})
+                                    if single_data:
+                                        all_covariance_data.append(single_data)
+                                        print(f"    ✓ Individual {batch_num}.{sub_batch_num}.{k+1}: {single_atctid}")
+                                except Exception as single_e:
+                                    print(f"    ✗ Individual {batch_num}.{sub_batch_num}.{k+1} failed: {single_atctid}")
+                                    continue
+            
+            if not all_covariance_data:
+                raise ValueError("No covariance data retrieved from any batch")
+            
+            # Combine all successful batches into a single covariance matrix
+            print(f"Combining covariance data from {len(all_covariance_data)} successful batches...")
+            
+            # Collect all species and their data from all batches
+            all_species = []
+            all_species_atctids = []
+            species_to_batch = {}  # Maps ATcT ID to batch index
+            
+            for batch_idx, batch_data in enumerate(all_covariance_data):
+                if 'species' in batch_data and 'species_atctids' in batch_data:
+                    for i, atctid in enumerate(batch_data['species_atctids']):
+                        if atctid not in species_to_batch:
+                            all_species.append(batch_data['species'][i])
+                            all_species_atctids.append(atctid)
+                            species_to_batch[atctid] = (batch_idx, i)
+            
+            # Create combined matrix
+            n_total = len(all_species_atctids)
+            combined_matrix = [[0.0 for _ in range(n_total)] for _ in range(n_total)]
+            
+            # Fill in the diagonal blocks from each batch
+            for batch_idx, batch_data in enumerate(all_covariance_data):
+                if 'matrix' in batch_data and 'species_atctids' in batch_data:
+                    batch_matrix = batch_data['matrix']
+                    batch_atctids = batch_data['species_atctids']
+                    
+                    for i, atctid_i in enumerate(batch_atctids):
+                        if atctid_i in species_to_batch:
+                            global_i = all_species_atctids.index(atctid_i)
+                            for j, atctid_j in enumerate(batch_atctids):
+                                if atctid_j in species_to_batch:
+                                    global_j = all_species_atctids.index(atctid_j)
+                                    combined_matrix[global_i][global_j] = batch_matrix[i][j]
+            
+            # Create combined CovarianceMatrix object
+            combined_data = {
+                'species': all_species,
+                'species_atctids': all_species_atctids,
+                'units': all_covariance_data[0].get('units', 'kJ/mol'),
+                'matrix': combined_matrix
+            }
+            
+            print(f"Combined matrix size: {n_total}x{n_total}")
+            return CovarianceMatrix.from_dict(combined_data)
+        else:
+            # For large ID requests, we need to convert IDs to ATcT IDs first
+            # This is a limitation - batch endpoint only supports ATcT IDs
+            raise ValueError("Large requests with internal IDs not supported. Use ATcT IDs instead.")
+    
+    # For smaller requests, use the regular endpoint
     params: Dict[str, Any] = {}
     if ids:
         params["ids"] = ",".join(ids)
     if atctids:
         params["atctids"] = ",".join(atctids)
     
-    data = await request_json_async("GET", f"{settings.base_url}/covariance/species/", params=params)
+    data = await request_json_async("GET", settings.url("covariance/species/"), params=params)
     return CovarianceMatrix.from_dict(data)
 
 def get_species_covariance_matrix(ids: Optional[List[str]] = None, atctids: Optional[List[str]] = None, block: bool = False) -> Union[CovarianceMatrix, asyncio.Task]:
@@ -368,6 +474,54 @@ def get_species_covariance_by_atctid(a_atctid: str, b_atctid: str, block: bool =
         If block=False: asyncio.Task that resolves to Covariance2x2 object
     """
     task = get_species_covariance_by_atctid_async(a_atctid, b_atctid)
+    if block:
+        return asyncio.run(task)
+    return task
+
+# -------- covariance batch endpoint --------
+async def get_species_covariance_batch_async(atctids: List[str], batch_size: int = 25) -> Dict[str, Any]:
+    """
+    Async get covariance matrix in batches for large requests.
+    
+    Args:
+        atctids: List of ATcT IDs
+        batch_size: Number of species per batch (2-50)
+        
+    Returns:
+        Dictionary with batch data including all batches
+        
+    Note:
+        This endpoint is designed for large requests that exceed the normal limit
+    """
+    if not atctids:
+        raise ValueError("atctids must be provided")
+    if len(atctids) < 2:
+        raise ValueError("At least 2 species required")
+    if batch_size < 2 or batch_size > 50:
+        raise ValueError("batch_size must be between 2 and 50")
+    
+    params: Dict[str, Any] = {
+        "atctids": ",".join(atctids),
+        "batch_size": str(batch_size)
+    }
+    
+    data = await request_json_async("GET", settings.url("covariance/species/batch/"), params=params)
+    return data
+
+def get_species_covariance_batch(atctids: List[str], batch_size: int = 25, block: bool = False) -> Union[Dict[str, Any], asyncio.Task]:
+    """
+    Get covariance matrix in batches for large requests.
+    
+    Args:
+        atctids: List of ATcT IDs
+        batch_size: Number of species per batch (2-50)
+        block: If True, blocks and returns result. If False, returns async task.
+        
+    Returns:
+        If block=True: Dictionary with batch data
+        If block=False: asyncio.Task that resolves to dictionary with batch data
+    """
+    task = get_species_covariance_batch_async(atctids, batch_size)
     if block:
         return asyncio.run(task)
     return task
