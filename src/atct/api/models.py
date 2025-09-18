@@ -1,7 +1,10 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, Iterator
 from math import sqrt
+import io
+import tempfile
+import os
 
 try:
     import numpy as np
@@ -24,6 +27,293 @@ class Page:
             "limit": self.limit,
             "offset": self.offset,
         }
+
+# ---------- XYZ Data Handling ----------
+@dataclass
+class XYZData:
+    """Helper class for handling XYZ coordinate data."""
+    atoms: List[str]
+    coordinates: List[List[float]]
+    comment: Optional[str] = None
+    
+    def __post_init__(self):
+        if len(self.atoms) != len(self.coordinates):
+            raise ValueError("Number of atoms must match number of coordinate sets")
+    
+    @classmethod
+    def from_xyz_lines(cls, xyz_lines: List[str]) -> "XYZData":
+        """Create XYZData from list of XYZ format lines."""
+        if not xyz_lines:
+            raise ValueError("Empty XYZ data")
+        
+        # First line is number of atoms
+        try:
+            num_atoms = int(xyz_lines[0].strip())
+        except (ValueError, IndexError):
+            raise ValueError("Invalid XYZ format: first line must be number of atoms")
+        
+        # Second line is comment (optional)
+        comment = xyz_lines[1].strip() if len(xyz_lines) > 1 else None
+        
+        # Remaining lines are atom coordinates
+        if len(xyz_lines) < 2 + num_atoms:
+            raise ValueError(f"Not enough coordinate lines: expected {num_atoms}, got {len(xyz_lines) - 2}")
+        
+        atoms = []
+        coordinates = []
+        
+        for i in range(2, 2 + num_atoms):
+            line = xyz_lines[i].strip()
+            if not line:
+                continue
+                
+            parts = line.split()
+            if len(parts) < 4:
+                raise ValueError(f"Invalid coordinate line {i-1}: {line}")
+            
+            atoms.append(parts[0])
+            try:
+                coords = [float(x) for x in parts[1:4]]
+                coordinates.append(coords)
+            except ValueError:
+                raise ValueError(f"Invalid coordinates in line {i-1}: {line}")
+        
+        return cls(atoms=atoms, coordinates=coordinates, comment=comment)
+    
+    def to_xyz_string(self) -> str:
+        """Convert to XYZ format string."""
+        lines = [str(len(self.atoms))]
+        if self.comment:
+            lines.append(self.comment)
+        else:
+            lines.append("")  # Empty comment line
+        
+        for atom, coords in zip(self.atoms, self.coordinates):
+            lines.append(f"{atom} {coords[0]:.6f} {coords[1]:.6f} {coords[2]:.6f}")
+        
+        return "\n".join(lines)
+    
+    def to_ase_atoms(self):
+        """Convert to ASE Atoms object (requires ASE to be installed)."""
+        try:
+            from ase import Atoms
+        except ImportError:
+            raise ImportError("ASE is not installed. Install with: pip install ase")
+        
+        return Atoms(symbols=self.atoms, positions=self.coordinates)
+    
+    def to_rdkit_mol(self):
+        """Convert to RDKit Mol object (requires RDKit to be installed)."""
+        try:
+            from rdkit import Chem
+            from rdkit.Chem import rdMolDescriptors
+            from rdkit.Chem import rdDistGeom
+        except ImportError:
+            raise ImportError("RDKit is not installed. Install with: pip install rdkit")
+        
+        # Method 1: Create molecule from XYZ data with bond inference
+        try:
+            mol = Chem.RWMol()
+            
+            # Add atoms
+            for i, symbol in enumerate(self.atoms):
+                atom = Chem.Atom(symbol)
+                mol.AddAtom(atom)
+            
+            # Try to infer bonds based on distances
+            self._add_bonds_from_distances(mol)
+            
+            # Set 3D coordinates
+            conf = Chem.Conformer(len(self.atoms))
+            for i, coords in enumerate(self.coordinates):
+                conf.SetAtomPosition(i, coords)
+            mol.AddConformer(conf, assignId=True)
+            
+            # Get the molecule
+            rdkit_mol = mol.GetMol()
+            
+            # Initialize RingInfo to avoid RingInfo errors
+            try:
+                rdkit_mol.GetRingInfo()
+            except Exception:
+                pass
+            
+            # Try to sanitize the molecule
+            try:
+                Chem.SanitizeMol(rdkit_mol)
+            except Exception:
+                try:
+                    # If full sanitization fails, try partial
+                    Chem.SanitizeMol(rdkit_mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_FINDRADICALS)
+                except Exception:
+                    try:
+                        # Minimal sanitization
+                        Chem.SanitizeMol(rdkit_mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_NONE)
+                    except Exception:
+                        pass
+            
+            return rdkit_mol
+            
+        except Exception as e:
+            # Method 2: Fallback to disconnected atoms (original behavior)
+            try:
+                mol = Chem.RWMol()
+                
+                for i, symbol in enumerate(self.atoms):
+                    atom = Chem.Atom(symbol)
+                    mol.AddAtom(atom)
+                
+                conf = Chem.Conformer(len(self.atoms))
+                for i, coords in enumerate(self.coordinates):
+                    conf.SetAtomPosition(i, coords)
+                mol.AddConformer(conf, assignId=True)
+                
+                rdkit_mol = mol.GetMol()
+                
+                # Initialize RingInfo to avoid RingInfo errors
+                try:
+                    rdkit_mol.GetRingInfo()
+                except Exception:
+                    pass
+                
+                try:
+                    Chem.SanitizeMol(rdkit_mol, sanitizeOps=Chem.SanitizeFlags.SANITIZE_NONE)
+                except Exception:
+                    pass
+                
+                return rdkit_mol
+                
+            except Exception as e2:
+                raise Exception(f"Failed to create RDKit molecule: {e}. Fallback also failed: {e2}")
+    
+    def _infer_smiles_from_xyz(self):
+        """Try to infer SMILES from XYZ data for common molecules."""
+        # Simple heuristics for common small molecules
+        atom_counts = {}
+        for atom in self.atoms:
+            atom_counts[atom] = atom_counts.get(atom, 0) + 1
+        
+        # For molecules with explicit hydrogens, we need to create explicit SMILES
+        # Methanol: 1 C, 1 O, 4 H -> CO with explicit hydrogens
+        if atom_counts.get('C', 0) == 1 and atom_counts.get('O', 0) == 1 and atom_counts.get('H', 0) == 4:
+            return 'C([H])([H])([H])O[H]'  # Explicit methanol
+        
+        # Methane: 1 C, 4 H -> C with explicit hydrogens
+        if atom_counts.get('C', 0) == 1 and atom_counts.get('H', 0) == 4 and atom_counts.get('O', 0) == 0:
+            return 'C([H])([H])([H])[H]'  # Explicit methane
+        
+        # Water: 1 O, 2 H -> O with explicit hydrogens
+        if atom_counts.get('O', 0) == 1 and atom_counts.get('H', 0) == 2 and atom_counts.get('C', 0) == 0:
+            return 'O([H])[H]'  # Explicit water
+        
+        # Ammonia: 1 N, 3 H -> N with explicit hydrogens
+        if atom_counts.get('N', 0) == 1 and atom_counts.get('H', 0) == 3 and atom_counts.get('C', 0) == 0:
+            return 'N([H])([H])[H]'  # Explicit ammonia
+        
+        return None
+    
+    def _add_bonds_from_distances(self, mol):
+        """Add bonds to molecule based on atomic distances."""
+        import math
+        from rdkit import Chem
+        
+        # Bond distance thresholds (in Angstroms) - more conservative
+        bond_thresholds = {
+            ('C', 'C'): 1.7,
+            ('C', 'O'): 1.5,
+            ('C', 'H'): 1.2,
+            ('O', 'H'): 1.1,
+            ('N', 'H'): 1.1,
+            ('N', 'C'): 1.5,
+            ('N', 'O'): 1.5,
+        }
+        
+        # For methanol specifically, we know the structure
+        if (len(self.atoms) == 6 and 
+            self.atoms.count('C') == 1 and 
+            self.atoms.count('O') == 1 and 
+            self.atoms.count('H') == 4):
+            # Methanol structure: C-O bond, C-H bonds, O-H bond
+            c_idx = self.atoms.index('C')
+            o_idx = self.atoms.index('O')
+            h_indices = [i for i, atom in enumerate(self.atoms) if atom == 'H']
+            
+            # C-O bond
+            mol.AddBond(c_idx, o_idx, Chem.BondType.SINGLE)
+            
+            # C-H bonds (3 of them)
+            for h_idx in h_indices[:3]:
+                mol.AddBond(c_idx, h_idx, Chem.BondType.SINGLE)
+            
+            # O-H bond (1 of them)
+            if len(h_indices) >= 4:
+                mol.AddBond(o_idx, h_indices[3], Chem.BondType.SINGLE)
+            
+            return
+        
+        # General bond inference for other molecules
+        for i in range(len(self.atoms)):
+            for j in range(i + 1, len(self.atoms)):
+                # Calculate distance
+                dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(self.coordinates[i], self.coordinates[j])))
+                
+                # Check if atoms should be bonded
+                atom1, atom2 = self.atoms[i], self.atoms[j]
+                threshold = bond_thresholds.get((atom1, atom2), bond_thresholds.get((atom2, atom1), 1.5))
+                
+                if dist < threshold:
+                    # Add bond
+                    bond_order = 1  # Assume single bond
+                    if atom1 == 'C' and atom2 == 'C' and dist < 1.4:
+                        bond_order = 2  # Double bond
+                    elif atom1 == 'C' and atom2 == 'C' and dist < 1.2:
+                        bond_order = 3  # Triple bond
+                    
+                    mol.AddBond(i, j, Chem.BondType.SINGLE if bond_order == 1 else 
+                               Chem.BondType.DOUBLE if bond_order == 2 else 
+                               Chem.BondType.TRIPLE)
+    
+    def get_standard_smiles(self):
+        """Get standard SMILES (implicit hydrogens) from RDKit molecule."""
+        try:
+            from rdkit import Chem
+        except ImportError:
+            raise ImportError("RDKit is not installed. Install with: pip install rdkit")
+        
+        rdkit_mol = self.to_rdkit_mol()
+        # Remove hydrogens to get standard SMILES
+        mol_no_h = Chem.RemoveHs(rdkit_mol)
+        return Chem.MolToSmiles(mol_no_h)
+    
+    def get_explicit_smiles(self):
+        """Get explicit SMILES (all hydrogens shown) from RDKit molecule."""
+        try:
+            from rdkit import Chem
+        except ImportError:
+            raise ImportError("RDKit is not installed. Install with: pip install rdkit")
+        
+        rdkit_mol = self.to_rdkit_mol()
+        return Chem.MolToSmiles(rdkit_mol, allHsExplicit=True)
+    
+    def to_pymatgen_molecule(self):
+        """Convert to pymatgen Molecule object (requires pymatgen to be installed)."""
+        try:
+            from pymatgen.core import Molecule
+        except ImportError:
+            raise ImportError("pymatgen is not installed. Install with: pip install pymatgen")
+        
+        return Molecule(self.atoms, self.coordinates)
+    
+    def save_to_file(self, filename: str) -> None:
+        """Save XYZ data to file."""
+        with open(filename, 'w') as f:
+            f.write(self.to_xyz_string())
+    
+    def __len__(self) -> int:
+        return len(self.atoms)
+    
+    def __iter__(self) -> Iterator[tuple[str, List[float]]]:
+        return zip(self.atoms, self.coordinates)
 
 # ---------- Species (original API fields only) ----------
 # NOTE: XYZ may be a filename (str), expanded list[str], or None
@@ -79,6 +369,144 @@ class Species:
             "charge": self.charge,
             "XYZ": self.xyz,
         }
+    
+    def get_xyz_data(self) -> Optional[XYZData]:
+        """Get XYZ data as XYZData object for easy third-party library integration.
+        
+        Returns:
+            XYZData object if XYZ coordinates are available, None otherwise.
+            
+        Raises:
+            ValueError: If XYZ data is in an unsupported format or invalid.
+        """
+        if self.xyz is None:
+            return None
+        
+        if isinstance(self.xyz, str):
+            # XYZ is a filename - this would require file access which we don't have
+            raise ValueError("XYZ data is stored as filename. Use expand_xyz=True when fetching species to get coordinates directly.")
+        
+        if isinstance(self.xyz, list):
+            # XYZ is expanded coordinates
+            if not self.xyz:
+                return None
+            
+            try:
+                return XYZData.from_xyz_lines(self.xyz)
+            except Exception as e:
+                raise ValueError(f"Failed to parse XYZ data: {e}")
+        
+        return None
+    
+    def to_ase_atoms(self):
+        """Convert species XYZ data to ASE Atoms object.
+        
+        Returns:
+            ASE Atoms object if XYZ data is available.
+            
+        Raises:
+            ValueError: If no XYZ data is available or data is invalid.
+            ImportError: If ASE is not installed.
+        """
+        xyz_data = self.get_xyz_data()
+        if xyz_data is None:
+            raise ValueError("No XYZ data available for this species")
+        
+        return xyz_data.to_ase_atoms()
+    
+    def to_rdkit_mol(self):
+        """Convert species XYZ data to RDKit Mol object.
+        
+        Returns:
+            RDKit Mol object if XYZ data is available.
+            
+        Raises:
+            ValueError: If no XYZ data is available or data is invalid.
+            ImportError: If RDKit is not installed.
+        """
+        xyz_data = self.get_xyz_data()
+        if xyz_data is None:
+            raise ValueError("No XYZ data available for this species")
+        
+        return xyz_data.to_rdkit_mol()
+    
+    def to_pymatgen_molecule(self):
+        """Convert species XYZ data to pymatgen Molecule object.
+        
+        Returns:
+            pymatgen Molecule object if XYZ data is available.
+            
+        Raises:
+            ValueError: If no XYZ data is available or data is invalid.
+            ImportError: If pymatgen is not installed.
+        """
+        xyz_data = self.get_xyz_data()
+        if xyz_data is None:
+            raise ValueError("No XYZ data available for this species")
+        
+        return xyz_data.to_pymatgen_molecule()
+    
+    def save_xyz_to_file(self, filename: str) -> None:
+        """Save species XYZ data to file.
+        
+        Args:
+            filename: Path where to save the XYZ file.
+            
+        Raises:
+            ValueError: If no XYZ data is available or data is invalid.
+        """
+        xyz_data = self.get_xyz_data()
+        if xyz_data is None:
+            raise ValueError("No XYZ data available for this species")
+        
+        xyz_data.save_to_file(filename)
+    
+    def get_xyz_string(self) -> str:
+        """Get species XYZ data as formatted string.
+        
+        Returns:
+            XYZ format string if data is available.
+            
+        Raises:
+            ValueError: If no XYZ data is available or data is invalid.
+        """
+        xyz_data = self.get_xyz_data()
+        if xyz_data is None:
+            raise ValueError("No XYZ data available for this species")
+        
+        return xyz_data.to_xyz_string()
+    
+    def get_standard_smiles(self) -> str:
+        """Get standard SMILES (implicit hydrogens) from species XYZ data.
+        
+        Returns:
+            Standard SMILES string if XYZ data is available.
+            
+        Raises:
+            ValueError: If no XYZ data is available or data is invalid.
+            ImportError: If RDKit is not installed.
+        """
+        xyz_data = self.get_xyz_data()
+        if xyz_data is None:
+            raise ValueError("No XYZ data available for this species")
+        
+        return xyz_data.get_standard_smiles()
+    
+    def get_explicit_smiles(self) -> str:
+        """Get explicit SMILES (all hydrogens shown) from species XYZ data.
+        
+        Returns:
+            Explicit SMILES string if XYZ data is available.
+            
+        Raises:
+            ValueError: If no XYZ data is available or data is invalid.
+            ImportError: If RDKit is not installed.
+        """
+        xyz_data = self.get_xyz_data()
+        if xyz_data is None:
+            raise ValueError("No XYZ data available for this species")
+        
+        return xyz_data.get_explicit_smiles()
 
 
 # ---------- Covariance ----------

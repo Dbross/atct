@@ -18,7 +18,7 @@ from .api import (
     create_reaction_calculator_async,
     calculate_reaction_enthalpy,
 )
-from .api.models import Species, CovarianceMatrix, Covariance2x2, Page, ReactionSpecies, ReactionResult, ReactionCalculator, NUMPY_AVAILABLE
+from .api.models import Species, CovarianceMatrix, Covariance2x2, Page, ReactionSpecies, ReactionResult, ReactionCalculator, XYZData, NUMPY_AVAILABLE
 from .api.pandas_io import as_dataframe
 from .api.exceptions import ATCTError, NotFound, BadRequest, Unauthorized, ServerError, NetworkError, TooManyRequests
 
@@ -50,6 +50,7 @@ __all__ = [
     "ReactionSpecies",
     "ReactionResult",
     "ReactionCalculator",
+    "XYZData",
     "as_dataframe",
     "ATCTError",
     "NotFound",

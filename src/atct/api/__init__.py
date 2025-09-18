@@ -478,54 +478,6 @@ def get_species_covariance_by_atctid(a_atctid: str, b_atctid: str, block: bool =
         return asyncio.run(task)
     return task
 
-# -------- covariance batch endpoint --------
-async def get_species_covariance_batch_async(atctids: List[str], batch_size: int = 25) -> Dict[str, Any]:
-    """
-    Async get covariance matrix in batches for large requests.
-    
-    Args:
-        atctids: List of ATcT IDs
-        batch_size: Number of species per batch (2-50)
-        
-    Returns:
-        Dictionary with batch data including all batches
-        
-    Note:
-        This endpoint is designed for large requests that exceed the normal limit
-    """
-    if not atctids:
-        raise ValueError("atctids must be provided")
-    if len(atctids) < 2:
-        raise ValueError("At least 2 species required")
-    if batch_size < 2 or batch_size > 50:
-        raise ValueError("batch_size must be between 2 and 50")
-    
-    params: Dict[str, Any] = {
-        "atctids": ",".join(atctids),
-        "batch_size": str(batch_size)
-    }
-    
-    data = await request_json_async("GET", settings.url("covariance/species/batch/"), params=params)
-    return data
-
-def get_species_covariance_batch(atctids: List[str], batch_size: int = 25, block: bool = False) -> Union[Dict[str, Any], asyncio.Task]:
-    """
-    Get covariance matrix in batches for large requests.
-    
-    Args:
-        atctids: List of ATcT IDs
-        batch_size: Number of species per batch (2-50)
-        block: If True, blocks and returns result. If False, returns async task.
-        
-    Returns:
-        If block=True: Dictionary with batch data
-        If block=False: asyncio.Task that resolves to dictionary with batch data
-    """
-    task = get_species_covariance_batch_async(atctids, batch_size)
-    if block:
-        return asyncio.run(task)
-    return task
-
 # -------- simple API endpoints --------
 async def get_species_simple_async(name: Optional[str] = None, smiles: Optional[str] = None, 
                       inchi: Optional[str] = None, inchikey: Optional[str] = None,

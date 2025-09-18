@@ -29,6 +29,16 @@ Advanced async reaction enthalpy calculation examples, including:
 - Covariance matrix usage (both 2x2 and full N×N matrices)
 - Comparison of covariance vs conventional uncertainty propagation methods
 
+### `example_xyz_helpers.py`
+XYZ coordinate helper examples for third-party library integration, including:
+- Fetching species with XYZ data from the API
+- Converting species XYZ data to ASE Atoms objects
+- Converting to RDKit Mol objects
+- Converting to pymatgen Molecule objects
+- File I/O operations for XYZ data
+- Error handling for missing dependencies
+- Real-world usage patterns with actual API data
+
 ## Running the Examples
 
 Make sure you have the atct package installed and the environment variable set:
@@ -44,6 +54,7 @@ export ATCT_API_BASE_URL="https://atct.anl.gov/api/v1"
 python examples/example_usage.py              # Async examples
 python examples/example_blocking_usage.py     # Blocking examples
 python examples/example_reaction_calculations.py  # Async reaction calculations
+python examples/example_xyz_helpers.py        # XYZ helper examples
 ```
 
 ## Async vs Blocking Usage
@@ -112,6 +123,14 @@ The atct library provides the following main functions. All functions support bo
 - `healthcheck(block=False)` - Check API health
 - `as_dataframe(species_list)` - Convert to pandas DataFrame
 
+### XYZ Helper Functions
+- `species.get_xyz_data()` - Get XYZ data as XYZData object
+- `species.to_ase_atoms()` - Convert to ASE Atoms object
+- `species.to_rdkit_mol()` - Convert to RDKit Mol object
+- `species.to_pymatgen_molecule()` - Convert to pymatgen Molecule object
+- `species.save_xyz_to_file(filename)` - Save XYZ data to file
+- `species.get_xyz_string()` - Get XYZ data as formatted string
+
 ### Async-Only Functions
 For advanced usage, you can also use the async-only versions:
 - `*_async()` versions of all functions (e.g., `get_species_async()`, `search_species_async()`)
@@ -123,7 +142,16 @@ For advanced usage, you can also use the async-only versions:
 - numpy (for reaction calculations)
 - pandas (optional, for DataFrame support)
 
+### XYZ Helper Dependencies
+The XYZ helper functions support integration with third-party libraries:
+- **ASE** (optional): `pip install ase` - for atomic simulation
+- **RDKit** (optional): `pip install rdkit` - for cheminformatics (may have limitations with some molecular structures, may show deprecation warnings)
+- **pymatgen** (optional): `pip install pymatgen` - for materials science
+
 Install with optional dependencies:
 ```bash
-pip install atct[pandas]
+pip install atct[pandas]  # For DataFrame support
+pip install ase           # For ASE integration
+pip install rdkit         # For RDKit integration
+pip install pymatgen      # For pymatgen integration
 ```
