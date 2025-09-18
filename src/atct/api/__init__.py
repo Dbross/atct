@@ -583,6 +583,7 @@ async def create_reaction_calculator_async(species_data: Dict[str, float], use_0
                      e.g., {"67-56-1*0": 1.0, "7727-37-9*0": -1.0}
         use_0k: If True, use 0K enthalpy values and fail if not available for any species.
                 If False, use 298.15K values (default).
+                Note: 0K calculations should use conventional method only
     
     Returns:
         ReactionCalculator instance
@@ -623,6 +624,7 @@ def create_reaction_calculator(species_data: Dict[str, float], use_0k: bool = Fa
                      e.g., {"67-56-1*0": 1.0, "7727-37-9*0": -1.0}
         use_0k: If True, use 0K enthalpy values and fail if not available for any species.
                 If False, use 298.15K values (default).
+                Note: 0K calculations should use conventional method only
         block: If True, blocks and returns result. If False, returns async task.
     
     Returns:
@@ -644,6 +646,7 @@ async def calculate_reaction_enthalpy_async(species_data: Dict[str, float], meth
         species_data: Dictionary mapping ATcT IDs to stoichiometric coefficients
         method: Calculation method ("covariance" or "conventional")
                 Defaults to "conventional" for compatibility without numpy
+                Note: 0K calculations should use "conventional" method only
         use_0k: If True, use 0K enthalpy values and fail if not available for any species.
                 If False, use 298.15K values (default).
     
@@ -652,7 +655,19 @@ async def calculate_reaction_enthalpy_async(species_data: Dict[str, float], meth
         
     Raises:
         ValueError: If use_0k=True but 0K values are not available for any species
+        
+    Warns:
+        UserWarning: If covariance method is used with 0K values (covariance matrix is only valid at 298.15K)
     """
+    # Warn if using covariance method with 0K values
+    if method == "covariance" and use_0k:
+        import warnings
+        warnings.warn(
+            "Covariance method is only valid at 298.15K as that is the temperature "
+            "the Thermochemical Network was solved at. Consider using conventional method for 0K calculations.",
+            UserWarning
+        )
+    
     calculator = await create_reaction_calculator_async(species_data, use_0k=use_0k)
     
     if method == "covariance":
@@ -669,6 +684,7 @@ def calculate_reaction_enthalpy(species_data: Dict[str, float], method: str = "c
         species_data: Dictionary mapping ATcT IDs to stoichiometric coefficients
         method: Calculation method ("covariance" or "conventional")
                 Defaults to "conventional" for compatibility without numpy
+                Note: 0K calculations should use "conventional" method only
         use_0k: If True, use 0K enthalpy values and fail if not available for any species.
                 If False, use 298.15K values (default).
         block: If True, blocks and returns result. If False, returns async task.
@@ -679,6 +695,9 @@ def calculate_reaction_enthalpy(species_data: Dict[str, float], method: str = "c
         
     Raises:
         ValueError: If use_0k=True but 0K values are not available for any species
+        
+    Warns:
+        UserWarning: If covariance method is used with 0K values (covariance matrix is only valid at 298.15K)
     """
     task = calculate_reaction_enthalpy_async(species_data, method=method, use_0k=use_0k)
     if block:

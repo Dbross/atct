@@ -52,9 +52,9 @@ species_data = {
 result_298k = calculate_reaction_enthalpy(species_data, 'covariance')
 print(f"298.15K reaction enthalpy: {result_298k}")
 
-# Calculate reaction enthalpy with 0K values (fails if 0K not available for any species)
+# Calculate reaction enthalpy with 0K values (conventional method only, fails if 0K not available for any species)
 try:
-    result_0k = calculate_reaction_enthalpy(species_data, 'covariance', use_0k=True)
+    result_0k = calculate_reaction_enthalpy(species_data, 'conventional', use_0k=True)
     print(f"0K reaction enthalpy: {result_0k}")
 except ValueError as e:
     print(f"Cannot use 0K values: {e}")
@@ -77,12 +77,13 @@ except ValueError as e:
 
 ### Reaction Calculations
 - `calculate_reaction_enthalpy(species_data, method, use_0k=False)` - Calculate reaction enthalpy
-  - `use_0k=True`: Use 0K enthalpy values (fails if not available for any species)
+  - `use_0k=True`: Use 0K enthalpy values with conventional method only (fails if not available for any species)
   - `use_0k=False`: Use 298.15K enthalpy values (default)
 - `create_reaction_calculator(species_data, use_0k=False)` - Create reaction calculator
 
-**Note:** The `covariance` method requires numpy (`pip install atct[numpy]`). 
-The `conventional` method works without external dependencies.
+**Note:** The `covariance` method requires numpy (`pip install atct[numpy]`) and should only be used with 298.15K values. 
+The `conventional` method works without external dependencies and is used for 0K calculations.
+A warning will be issued if covariance method is used with 0K values, as the covariance matrix is only valid at 298.15K (the temperature the Thermochemical Network was solved at).
 
 ### Utility
 - `healthcheck()` - Check API health status
