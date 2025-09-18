@@ -42,15 +42,22 @@ results = search_species("methanol", limit=5)
 for item in results.items:
     print(f"{item.name} ({item.atct_id})")
 
-# Calculate reaction enthalpy
+# Calculate reaction enthalpy (298.15K values, default)
 species_data = {
     '67-56-1*0': -1.0,    # CH3OH (reactant)
     '7727-37-9*0': -1.5,  # O2 (reactant) 
     '124-38-9*0': 1.0,    # CO2 (product)
     '7732-18-5*0': 2.0    # H2O (product)
 }
-result = calculate_reaction_enthalpy(species_data, 'covariance')
-print(f"Reaction enthalpy: {result}")
+result_298k = calculate_reaction_enthalpy(species_data, 'covariance')
+print(f"298.15K reaction enthalpy: {result_298k}")
+
+# Calculate reaction enthalpy with 0K values (fails if 0K not available for any species)
+try:
+    result_0k = calculate_reaction_enthalpy(species_data, 'covariance', use_0k=True)
+    print(f"0K reaction enthalpy: {result_0k}")
+except ValueError as e:
+    print(f"Cannot use 0K values: {e}")
 ```
 
 ## API Functions
@@ -69,8 +76,10 @@ print(f"Reaction enthalpy: {result}")
 - `get_species_covariance_by_ids(a_id, b_id)` - Get covariance by numeric IDs
 
 ### Reaction Calculations
-- `calculate_reaction_enthalpy(species_data, method)` - Calculate reaction enthalpy
-- `create_reaction_calculator(species_data)` - Create reaction calculator
+- `calculate_reaction_enthalpy(species_data, method, use_0k=False)` - Calculate reaction enthalpy
+  - `use_0k=True`: Use 0K enthalpy values (fails if not available for any species)
+  - `use_0k=False`: Use 298.15K enthalpy values (default)
+- `create_reaction_calculator(species_data, use_0k=False)` - Create reaction calculator
 
 **Note:** The `covariance` method requires numpy (`pip install atct[numpy]`). 
 The `conventional` method works without external dependencies.

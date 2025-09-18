@@ -575,15 +575,20 @@ def get_all_species(block: bool = False) -> Union[List[Species], asyncio.Task]:
     return task
 
 # -------- reaction calculations --------
-async def create_reaction_calculator_async(species_data: Dict[str, float]) -> ReactionCalculator:
+async def create_reaction_calculator_async(species_data: Dict[str, float], use_0k: bool = False) -> ReactionCalculator:
     """Async create a ReactionCalculator from species ATcT IDs and stoichiometry.
     
     Args:
         species_data: Dictionary mapping ATcT IDs to stoichiometric coefficients
                      e.g., {"67-56-1*0": 1.0, "7727-37-9*0": -1.0}
+        use_0k: If True, use 0K enthalpy values and fail if not available for any species.
+                If False, use 298.15K values (default).
     
     Returns:
         ReactionCalculator instance
+        
+    Raises:
+        ValueError: If use_0k=True but 0K values are not available for any species
     """
     reaction_species = []
     
@@ -600,7 +605,7 @@ async def create_reaction_calculator_async(species_data: Dict[str, float]) -> Re
         reaction_species.append(ReactionSpecies(species, stoichiometry))
     
     # Create calculator without building covariance matrix initially
-    calculator = ReactionCalculator(reaction_species, cov_matrix=None, build_cov_matrix=False)
+    calculator = ReactionCalculator(reaction_species, cov_matrix=None, build_cov_matrix=False, use_0k=use_0k)
     try:
         import numpy as np
         # If numpy is available, build async covariance matrix
@@ -610,35 +615,45 @@ async def create_reaction_calculator_async(species_data: Dict[str, float]) -> Re
     
     return calculator
 
-def create_reaction_calculator(species_data: Dict[str, float], block: bool = False) -> Union[ReactionCalculator, asyncio.Task]:
+def create_reaction_calculator(species_data: Dict[str, float], use_0k: bool = False, block: bool = False) -> Union[ReactionCalculator, asyncio.Task]:
     """Create a ReactionCalculator from species ATcT IDs and stoichiometry.
     
     Args:
         species_data: Dictionary mapping ATcT IDs to stoichiometric coefficients
                      e.g., {"67-56-1*0": 1.0, "7727-37-9*0": -1.0}
+        use_0k: If True, use 0K enthalpy values and fail if not available for any species.
+                If False, use 298.15K values (default).
         block: If True, blocks and returns result. If False, returns async task.
     
     Returns:
         If block=True: ReactionCalculator instance
         If block=False: asyncio.Task that resolves to ReactionCalculator instance
+        
+    Raises:
+        ValueError: If use_0k=True but 0K values are not available for any species
     """
-    task = create_reaction_calculator_async(species_data)
+    task = create_reaction_calculator_async(species_data, use_0k=use_0k)
     if block:
         return asyncio.run(task)
     return task
 
-async def calculate_reaction_enthalpy_async(species_data: Dict[str, float], method: str = "conventional") -> ReactionResult:
+async def calculate_reaction_enthalpy_async(species_data: Dict[str, float], method: str = "conventional", use_0k: bool = False) -> ReactionResult:
     """Async calculate reaction enthalpy for a given reaction.
     
     Args:
         species_data: Dictionary mapping ATcT IDs to stoichiometric coefficients
         method: Calculation method ("covariance" or "conventional")
                 Defaults to "conventional" for compatibility without numpy
+        use_0k: If True, use 0K enthalpy values and fail if not available for any species.
+                If False, use 298.15K values (default).
     
     Returns:
         ReactionResult with enthalpy and uncertainty
+        
+    Raises:
+        ValueError: If use_0k=True but 0K values are not available for any species
     """
-    calculator = await create_reaction_calculator_async(species_data)
+    calculator = await create_reaction_calculator_async(species_data, use_0k=use_0k)
     
     if method == "covariance":
         return calculator.calculate_covariance_method()
@@ -647,20 +662,25 @@ async def calculate_reaction_enthalpy_async(species_data: Dict[str, float], meth
     else:
         raise ValueError(f"Unknown method: {method}. Use 'covariance' or 'conventional'")
 
-def calculate_reaction_enthalpy(species_data: Dict[str, float], method: str = "conventional", block: bool = False) -> Union[ReactionResult, asyncio.Task]:
+def calculate_reaction_enthalpy(species_data: Dict[str, float], method: str = "conventional", use_0k: bool = False, block: bool = False) -> Union[ReactionResult, asyncio.Task]:
     """Calculate reaction enthalpy for a given reaction.
     
     Args:
         species_data: Dictionary mapping ATcT IDs to stoichiometric coefficients
         method: Calculation method ("covariance" or "conventional")
                 Defaults to "conventional" for compatibility without numpy
+        use_0k: If True, use 0K enthalpy values and fail if not available for any species.
+                If False, use 298.15K values (default).
         block: If True, blocks and returns result. If False, returns async task.
     
     Returns:
         If block=True: ReactionResult with enthalpy and uncertainty
         If block=False: asyncio.Task that resolves to ReactionResult
+        
+    Raises:
+        ValueError: If use_0k=True but 0K values are not available for any species
     """
-    task = calculate_reaction_enthalpy_async(species_data, method=method)
+    task = calculate_reaction_enthalpy_async(species_data, method=method, use_0k=use_0k)
     if block:
         return asyncio.run(task)
     return task

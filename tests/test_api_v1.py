@@ -748,6 +748,108 @@ class TestReactionCalculations:
         
         assert isinstance(comparison['covariance'], ReactionResult)
         assert isinstance(comparison['conventional'], ReactionResult)
+    
+    def test_reaction_calculator_0k_flag_true(self):
+        """Test ReactionCalculator uses 0K values when use_0k=True."""
+        # Species with both 0K and 298K values
+        species_with_0k = Species(
+            atct_id="67-56-1*0",
+            name="Methanol",
+            formula="CH4O",
+            atct_tn_version=None,
+            delta_h_0k="-201.0",  # 0K value
+            delta_h_298k="-200.85",  # 298K value
+            delta_h_298k_uncertainty="0.1",
+            inchi=None,
+            inchi_key=None,
+            smiles=None,
+            casrn=None,
+            charge=None,
+            xyz=None
+        )
+        
+        reaction_species = [ReactionSpecies(species_with_0k, -1.0)]
+        calculator = ReactionCalculator(reaction_species, use_0k=True)
+        
+        # Check that 0K value is used
+        assert calculator.enthalpies[0] == -201.0  # Should use 0K value
+        assert calculator.uncertainties[0] == 0.1  # From 298K uncertainty
+    
+    def test_reaction_calculator_0k_flag_false(self):
+        """Test ReactionCalculator uses 298K values when use_0k=False (default)."""
+        # Species with both 0K and 298K values
+        species_with_0k = Species(
+            atct_id="67-56-1*0",
+            name="Methanol",
+            formula="CH4O",
+            atct_tn_version=None,
+            delta_h_0k="-201.0",  # 0K value
+            delta_h_298k="-200.85",  # 298K value
+            delta_h_298k_uncertainty="0.1",
+            inchi=None,
+            inchi_key=None,
+            smiles=None,
+            casrn=None,
+            charge=None,
+            xyz=None
+        )
+        
+        reaction_species = [ReactionSpecies(species_with_0k, -1.0)]
+        calculator = ReactionCalculator(reaction_species, use_0k=False)
+        
+        # Check that 298K value is used
+        assert calculator.enthalpies[0] == -200.85  # Should use 298K value
+        assert calculator.uncertainties[0] == 0.1  # From 298K uncertainty
+    
+    def test_reaction_calculator_0k_flag_missing_0k_fails(self):
+        """Test ReactionCalculator fails when use_0k=True but 0K values not available."""
+        # Species with only 298K values
+        species_298k_only = Species(
+            atct_id="7727-37-9*0",
+            name="Dinitrogen",
+            formula="N2",
+            atct_tn_version=None,
+            delta_h_0k=None,  # No 0K value
+            delta_h_298k="0",  # 298K value
+            delta_h_298k_uncertainty="exact",
+            inchi=None,
+            inchi_key=None,
+            smiles=None,
+            casrn=None,
+            charge=None,
+            xyz=None
+        )
+        
+        reaction_species = [ReactionSpecies(species_298k_only, -1.0)]
+        
+        # Should raise ValueError when use_0k=True but 0K not available
+        with pytest.raises(ValueError, match="0K enthalpy values not available for species"):
+            ReactionCalculator(reaction_species, use_0k=True)
+    
+    def test_reaction_calculator_0k_flag_empty_0k_fails(self):
+        """Test ReactionCalculator fails when use_0k=True but 0K values are empty."""
+        # Species with empty 0K values
+        species_empty_0k = Species(
+            atct_id="67-56-1*0",
+            name="Methanol",
+            formula="CH4O",
+            atct_tn_version=None,
+            delta_h_0k="",  # Empty 0K value
+            delta_h_298k="-200.85",  # 298K value
+            delta_h_298k_uncertainty="0.1",
+            inchi=None,
+            inchi_key=None,
+            smiles=None,
+            casrn=None,
+            charge=None,
+            xyz=None
+        )
+        
+        reaction_species = [ReactionSpecies(species_empty_0k, -1.0)]
+        
+        # Should raise ValueError when use_0k=True but 0K is empty
+        with pytest.raises(ValueError, match="0K enthalpy values not available for species"):
+            ReactionCalculator(reaction_species, use_0k=True)
 
 
 class TestPandasIO:

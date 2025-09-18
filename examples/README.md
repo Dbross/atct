@@ -26,8 +26,17 @@ Advanced async reaction enthalpy calculation examples, including:
 - Water formation reaction
 - **Benzene combustion reaction** (C6H6 + 7.5 O2 → 6 CO2 + 3 H2O)
 - **Benzene ionization reaction** (C6H6 → C6H6+ + e-)
+- **0K vs 298.15K temperature comparison** for all reactions (0K uses conventional method only)
 - Covariance matrix usage (both 2x2 and full N×N matrices)
 - Comparison of covariance vs conventional uncertainty propagation methods
+
+### `example_async_reaction_calculations.py`
+Fully async reaction enthalpy calculations with concurrent requests, demonstrating:
+- Multiple reaction calculations running simultaneously
+- **0K vs 298.15K temperature comparison** for all reactions (0K uses conventional method only)
+- Performance benefits of async/await for multiple API calls
+- All the same reactions as `example_reaction_calculations.py` but with concurrent execution
+- Timing analysis and scaling benefits
 
 ### `example_xyz_helpers.py`
 XYZ coordinate helper examples for third-party library integration, including:

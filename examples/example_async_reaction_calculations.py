@@ -89,16 +89,18 @@ async def main():
     # Create all async tasks for reaction enthalpy calculations
     reaction_tasks = {}
     for reaction_name, reaction_data in reactions.items():
-        # Create tasks for both covariance and conventional methods
+        # Create tasks for both covariance and conventional methods (298.15K values)
+        # and conventional method only for 0K values (since uncertainties are from 298.15K)
         reaction_tasks[reaction_name] = {
-            'covariance': calculate_reaction_enthalpy(reaction_data["species_data"], 'covariance'),
-            'conventional': calculate_reaction_enthalpy(reaction_data["species_data"], 'conventional')
+            'covariance_298k': calculate_reaction_enthalpy(reaction_data["species_data"], 'covariance', use_0k=False),
+            'conventional_298k': calculate_reaction_enthalpy(reaction_data["species_data"], 'conventional', use_0k=False),
+            'conventional_0k': calculate_reaction_enthalpy(reaction_data["species_data"], 'conventional', use_0k=True)
         }
     
     # Create tasks for reaction calculators (for method comparison)
     calculator_tasks = {}
     for reaction_name, reaction_data in reactions.items():
-        calculator_tasks[reaction_name] = create_reaction_calculator(reaction_data["species_data"])
+        calculator_tasks[reaction_name] = create_reaction_calculator(reaction_data["species_data"], use_0k=False)
     
     # Create tasks for covariance examples
     covariance_tasks = {
@@ -120,8 +122,9 @@ async def main():
     reaction_results = {}
     for reaction_name, tasks in reaction_tasks.items():
         reaction_results[reaction_name] = await asyncio.gather(
-            tasks['covariance'], 
-            tasks['conventional'], 
+            tasks['covariance_298k'], 
+            tasks['conventional_298k'],
+            tasks['conventional_0k'],
             return_exceptions=True
         )
     
@@ -161,18 +164,24 @@ async def main():
             print()
             
             # Display reaction enthalpy results
-            cov_result, conv_result = reaction_results[reaction_name]
+            cov_result_298k, conv_result_298k, conv_result_0k = reaction_results[reaction_name]
             
-            if isinstance(cov_result, Exception):
-                print(f"   Covariance method error: {cov_result}")
+            print("   298.15K values:")
+            if isinstance(cov_result_298k, Exception):
+                print(f"   Covariance method error: {cov_result_298k}")
             else:
-                print(f"   Covariance method:     {cov_result}")
+                print(f"   Covariance method:     {cov_result_298k}")
             
-            if isinstance(conv_result, Exception):
-                print(f"   Conventional method error: {conv_result}")
+            if isinstance(conv_result_298k, Exception):
+                print(f"   Conventional method error: {conv_result_298k}")
             else:
-                print(f"   Conventional method:   {conv_result}")
-            print()
+                print(f"   Conventional method:   {conv_result_298k}")
+            
+            print("   0K values (conventional method only):")
+            if isinstance(conv_result_0k, Exception):
+                print(f"   Conventional method error: {conv_result_0k}")
+            else:
+                print(f"   Conventional method:   {conv_result_0k}")
             
             # Display method comparison
             calculator = calculator_results[reaction_name]
@@ -222,7 +231,7 @@ async def main():
     total_requests = 0
     for reaction_data in reactions.values():
         total_requests += len(reaction_data["species_data"])  # Species requests
-        total_requests += 2  # Two reaction calculation methods per reaction
+        total_requests += 3  # Three reaction calculation methods per reaction (covariance 298K, conventional 298K, conventional 0K)
     total_requests += 2  # Covariance requests
     
     print(f"Total API requests made: {total_requests}")

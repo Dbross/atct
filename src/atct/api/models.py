@@ -595,14 +595,36 @@ class ReactionResult:
 class ReactionCalculator:
     """Calculate reaction enthalpies with proper uncertainty propagation."""
     
-    def __init__(self, reaction_species: List[ReactionSpecies], cov_matrix: Optional[np.ndarray] = None, build_cov_matrix: bool = True):
-        """Initialize with list of ReactionSpecies objects."""
+    def __init__(self, reaction_species: List[ReactionSpecies], cov_matrix: Optional[np.ndarray] = None, build_cov_matrix: bool = True, use_0k: bool = False):
+        """Initialize with list of ReactionSpecies objects.
+        
+        Args:
+            reaction_species: List of ReactionSpecies objects
+            cov_matrix: Optional covariance matrix
+            build_cov_matrix: Whether to build covariance matrix
+            use_0k: If True, use 0K enthalpy values and fail if not available for any species.
+                    If False, use 298.15K values (default).
+        
+        Raises:
+            ValueError: If use_0k=True but 0K values are not available for any species
+        """
         self.reaction_species = reaction_species
+        self.use_0k = use_0k
+        
+        # Check 0K availability if requested
+        if use_0k:
+            missing_0k = []
+            for rs in reaction_species:
+                if not self._has_0k_value(rs.species):
+                    missing_0k.append(f"{rs.species.name} ({rs.species.atct_id})")
+            if missing_0k:
+                raise ValueError(f"0K enthalpy values not available for species: {', '.join(missing_0k)}")
         
         if NUMPY_AVAILABLE:
             self.stoichiometry = np.array([rs.stoichiometry for rs in reaction_species])
-            self.enthalpies = np.array([rs.species.delta_h_298k for rs in reaction_species])
-            self.uncertainties = np.array([rs.species.delta_h_298k_uncertainty for rs in reaction_species])
+            # Use 0K or 298K values based on flag
+            self.enthalpies = np.array([self._get_enthalpy_value(rs.species) for rs in reaction_species])
+            self.uncertainties = np.array([self._get_uncertainty_value(rs.species) for rs in reaction_species])
             
             # Convert string values to floats, handling 'exact' uncertainties
             self.enthalpies = np.array([float(h) if h is not None else 0.0 for h in self.enthalpies])
@@ -621,13 +643,30 @@ class ReactionCalculator:
         else:
             # Fallback to lists when numpy is not available
             self.stoichiometry = [rs.stoichiometry for rs in reaction_species]
-            self.enthalpies = [float(rs.species.delta_h_298k) if rs.species.delta_h_298k is not None else 0.0 for rs in reaction_species]
+            self.enthalpies = [float(self._get_enthalpy_value(rs.species)) if self._get_enthalpy_value(rs.species) is not None else 0.0 for rs in reaction_species]
             self.uncertainties = [
-                0.0 if rs.species.delta_h_298k_uncertainty == 'exact' or rs.species.delta_h_298k_uncertainty is None 
-                else float(rs.species.delta_h_298k_uncertainty) 
+                0.0 if self._get_uncertainty_value(rs.species) == 'exact' or self._get_uncertainty_value(rs.species) is None 
+                else float(self._get_uncertainty_value(rs.species)) 
                 for rs in reaction_species
             ]
             self.cov_matrix = None
+    
+    def _has_0k_value(self, species) -> bool:
+        """Check if species has valid 0K enthalpy value."""
+        return (species.delta_h_0k is not None and 
+                species.delta_h_0k.strip() != '' and 
+                species.delta_h_0k != 'None')
+    
+    def _get_enthalpy_value(self, species) -> Optional[str]:
+        """Get enthalpy value based on use_0k flag."""
+        if self.use_0k:
+            return species.delta_h_0k
+        else:
+            return species.delta_h_298k
+    
+    def _get_uncertainty_value(self, species) -> Optional[str]:
+        """Get uncertainty value (always from 298K data)."""
+        return species.delta_h_298k_uncertainty
     
     def _build_covariance_matrix(self):
         """Build covariance matrix from species data."""

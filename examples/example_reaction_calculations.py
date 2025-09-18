@@ -33,18 +33,29 @@ async def main():
     
     
     try:
-        # Calculate using different methods
-        print("   Calculating reaction enthalpy...")
+        # Calculate using different methods (298.15K values)
+        print("   Calculating reaction enthalpy (298.15K values)...")
         
-        cov_result = await calculate_reaction_enthalpy(species_data, 'covariance')
-        conv_result = await calculate_reaction_enthalpy(species_data, 'conventional')
+        cov_result_298k = await calculate_reaction_enthalpy(species_data, 'covariance', use_0k=False)
+        conv_result_298k = await calculate_reaction_enthalpy(species_data, 'conventional', use_0k=False)
         
-        print(f"   Covariance method:     {cov_result}")
-        print(f"   Conventional method:   {conv_result}")
+        print(f"   Covariance method (298.15K):     {cov_result_298k}")
+        print(f"   Conventional method (298.15K):   {conv_result_298k}")
         print()
         
-        # Compare methods
-        calculator = await create_reaction_calculator(species_data)
+        # Try 0K values if available (conventional method only)
+        print("   Calculating reaction enthalpy (0K values, conventional method only)...")
+        try:
+            conv_result_0k = await calculate_reaction_enthalpy(species_data, 'conventional', use_0k=True)
+            print(f"   Conventional method (0K):       {conv_result_0k}")
+            print()
+            
+        except ValueError as e:
+            print(f"   Cannot use 0K values: {e}")
+            print()
+        
+        # Compare methods (using 298.15K calculator)
+        calculator = await create_reaction_calculator(species_data, use_0k=False)
         comparison = calculator.compare_methods()
         
         print(f"   Difference in uncertainty: {comparison['difference']:.6f} kJ/mol")
@@ -73,13 +84,20 @@ async def main():
             print(f"   {species.name} ({atct_id}): {species.delta_h_298k} ± {species.delta_h_298k_uncertainty} kJ/mol")
         print()
         
-        # Calculate reaction enthalpy
-        result = await calculate_reaction_enthalpy(original_species_data, 'covariance')
-        print(f"   Reaction enthalpy: {result}")
+        # Calculate reaction enthalpy (298.15K values)
+        result_298k = await calculate_reaction_enthalpy(original_species_data, 'covariance', use_0k=False)
+        print(f"   Reaction enthalpy (298.15K): {result_298k}")
+        
+        # Try 0K values if available (conventional method only)
+        try:
+            result_0k = await calculate_reaction_enthalpy(original_species_data, 'conventional', use_0k=True)
+            print(f"   Reaction enthalpy (0K):      {result_0k}")
+        except ValueError as e:
+            print(f"   Cannot use 0K values: {e}")
         print()
         
         # Show method comparison
-        calculator = await create_reaction_calculator(original_species_data)
+        calculator = await create_reaction_calculator(original_species_data, use_0k=False)
         comparison = calculator.compare_methods()
         
         print("   Method comparison:")
@@ -112,8 +130,15 @@ async def main():
             print(f"   {species.name} ({atct_id}): {species.delta_h_298k} ± {species.delta_h_298k_uncertainty} kJ/mol")
         print()
         
-        result = await calculate_reaction_enthalpy(water_formation_data, 'covariance')
-        print(f"   Reaction enthalpy: {result}")
+        result_298k = await calculate_reaction_enthalpy(water_formation_data, 'covariance', use_0k=False)
+        print(f"   Reaction enthalpy (298.15K): {result_298k}")
+        
+        # Try 0K values if available (conventional method only)
+        try:
+            result_0k = await calculate_reaction_enthalpy(water_formation_data, 'conventional', use_0k=True)
+            print(f"   Reaction enthalpy (0K):      {result_0k}")
+        except ValueError as e:
+            print(f"   Cannot use 0K values: {e}")
         print()
         
     except Exception as e:
@@ -139,12 +164,19 @@ async def main():
             print(f"   {species.name} ({atct_id}): {species.delta_h_298k} ± {species.delta_h_298k_uncertainty} kJ/mol")
         print()
         
-        # Calculate using different methods
-        cov_result = await calculate_reaction_enthalpy(benzene_combustion_data, 'covariance')
-        conv_result = await calculate_reaction_enthalpy(benzene_combustion_data, 'conventional')
+        # Calculate using different methods (298.15K values)
+        cov_result_298k = await calculate_reaction_enthalpy(benzene_combustion_data, 'covariance', use_0k=False)
+        conv_result_298k = await calculate_reaction_enthalpy(benzene_combustion_data, 'conventional', use_0k=False)
         
-        print(f"   Covariance method:     {cov_result}")
-        print(f"   Conventional method:   {conv_result}")
+        print(f"   Covariance method (298.15K):     {cov_result_298k}")
+        print(f"   Conventional method (298.15K):   {conv_result_298k}")
+        
+        # Try 0K values if available (conventional method only)
+        try:
+            conv_result_0k = await calculate_reaction_enthalpy(benzene_combustion_data, 'conventional', use_0k=True)
+            print(f"   Conventional method (0K):       {conv_result_0k}")
+        except ValueError as e:
+            print(f"   Cannot use 0K values: {e}")
         print()
         
     except Exception as e:
@@ -168,12 +200,19 @@ async def main():
             print(f"   {species.name} ({atct_id}): {species.delta_h_298k} ± {species.delta_h_298k_uncertainty} kJ/mol")
         print()
         
-        # Calculate using different methods
-        cov_result = await calculate_reaction_enthalpy(benzene_ionization_data, 'covariance')
-        conv_result = await calculate_reaction_enthalpy(benzene_ionization_data, 'conventional')
+        # Calculate using different methods (298.15K values)
+        cov_result_298k = await calculate_reaction_enthalpy(benzene_ionization_data, 'covariance', use_0k=False)
+        conv_result_298k = await calculate_reaction_enthalpy(benzene_ionization_data, 'conventional', use_0k=False)
         
-        print(f"   Covariance method:     {cov_result}")
-        print(f"   Conventional method:   {conv_result}")
+        print(f"   Covariance method (298.15K):     {cov_result_298k}")
+        print(f"   Conventional method (298.15K):   {conv_result_298k}")
+        
+        # Try 0K values if available (conventional method only)
+        try:
+            conv_result_0k = await calculate_reaction_enthalpy(benzene_ionization_data, 'conventional', use_0k=True)
+            print(f"   Conventional method (0K):       {conv_result_0k}")
+        except ValueError as e:
+            print(f"   Cannot use 0K values: {e}")
         print()
         
     except Exception as e:
