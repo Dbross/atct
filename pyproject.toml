@@ -9,7 +9,13 @@ description = "ATcT: Active Thermochemical Tables — Python client for v1 API"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
-authors = [{ name = "ATcT Team" }]
+authors = [
+  { name = "David H. Bross" },
+  { name = "Branko Ruscic" }
+]
+maintainers = [
+  { name = "ATcT Team", email = "ATcT@anl.gov" }
+]
 keywords = ["thermochemistry", "ATcT", "chemistry", "science", "data"]
 classifiers = [
   "Programming Language :: Python :: 3",
