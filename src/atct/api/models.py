@@ -369,6 +369,11 @@ def _symbol_matching_permutations(mol_syms: List[str], xyz_syms: List[str]):
 def _species_rdkit_from_smiles_or_inchi_xyz(species: "Species", xyz_data: "XYZData") -> Any:
     """Build RDKit Mol from ATcT SMILES/InChI (topology + charge) + ATcT XYZ coordinates.
 
+    Uses 3D ``EmbedMolecule`` distances only to align XYZ atom order with the RDKit
+    graph; final coordinates are always taken from ``xyz_data``. If all 3D embed
+    attempts fail, falls back to 2D coordinates for that distance template (same
+    permutation + XYZ assignment pipeline).
+
     Falls back to ``None`` so callers can use distance-only ``XYZData.to_rdkit_mol``.
     """
     try:
@@ -422,7 +427,10 @@ def _species_rdkit_from_smiles_or_inchi_xyz(species: "Species", xyz_data: "XYZDa
             break
     if not embedded:
         if AllChem.EmbedMolecule(mh, randomSeed=42, useRandomCoords=True) != 0:
-            return None
+            try:
+                AllChem.Compute2DCoords(mh)
+            except Exception:
+                return None
 
     dm_mol = _pairwise_distances_from_mol(mh)
     if not dm_mol:

@@ -6,7 +6,7 @@ A comprehensive Python client for the ATcT v1 API with advanced reaction enthalp
 
 - **Complete v1 API coverage** - all endpoints implemented with proper error handling
 - **Reaction calculations** - advanced uncertainty propagation with multiple methods
-- **Zero dependencies** - works with only Python standard library
+- **Minimal dependencies** - works with only Python standard library and httpx
 - **Optional enhancements** - numpy for advanced calculations, pandas for DataFrames
 - **Dual import support** - use `from atct.api import ...` or `from atct import ...`
 - **Robust error handling** - comprehensive exception mapping and retry logic
@@ -15,7 +15,7 @@ A comprehensive Python client for the ATcT v1 API with advanced reaction enthalp
 ## Installation
 
 ```bash
-# Basic installation (no external dependencies)
+# Basic installation (httpx only)
 pip install atct
 
 # With pandas support for DataFrames
