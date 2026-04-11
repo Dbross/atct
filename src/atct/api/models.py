@@ -3,6 +3,7 @@ from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional, Union, Iterator
 from math import sqrt
 import io
+import itertools
 import tempfile
 import os
 
@@ -315,6 +316,144 @@ class XYZData:
     def __iter__(self) -> Iterator[tuple[str, List[float]]]:
         return zip(self.atoms, self.coordinates)
 
+
+def _pairwise_distances(coords: List[List[float]]) -> List[List[float]]:
+    n = len(coords)
+    d = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            dij = sqrt(sum((coords[i][k] - coords[j][k]) ** 2 for k in range(3)))
+            d[i][j] = d[j][i] = dij
+    return d
+
+
+def _pairwise_distances_from_mol(mol: Any) -> List[List[float]]:
+    if mol.GetNumConformers() == 0:
+        return []
+    conf = mol.GetConformer()
+    n = mol.GetNumAtoms()
+    d = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            dij = conf.GetAtomPosition(i).Distance(conf.GetAtomPosition(j))
+            d[i][j] = d[j][i] = dij
+    return d
+
+
+def _perm_distance_score(
+    dm_mol: List[List[float]], dm_xyz: List[List[float]], perm: tuple[int, ...]
+) -> float:
+    """perm[i] = XYZ atom index aligned to RDKit mol atom i."""
+    n = len(perm)
+    s = 0.0
+    for i in range(n):
+        for j in range(i + 1, n):
+            s += (dm_mol[i][j] - dm_xyz[perm[i]][perm[j]]) ** 2
+    return s
+
+
+def _symbol_matching_permutations(mol_syms: List[str], xyz_syms: List[str]):
+    n = len(mol_syms)
+    if n != len(xyz_syms) or n > 10:
+        return
+    for p in itertools.permutations(range(n)):
+        ok = True
+        for i in range(n):
+            if mol_syms[i] != xyz_syms[p[i]]:
+                ok = False
+                break
+        if ok:
+            yield p
+
+
+def _species_rdkit_from_smiles_or_inchi_xyz(species: "Species", xyz_data: "XYZData") -> Any:
+    """Build RDKit Mol from ATcT SMILES/InChI (topology + charge) + ATcT XYZ coordinates.
+
+    Falls back to ``None`` so callers can use distance-only ``XYZData.to_rdkit_mol``.
+    """
+    try:
+        from rdkit import Chem
+        from rdkit.Chem import AllChem
+    except ImportError:
+        return None
+
+    smiles = (species.smiles or "").strip()
+    inchi = (species.inchi or "").strip()
+    m0 = None
+    if smiles:
+        m0 = Chem.MolFromSmiles(smiles)
+    elif inchi:
+        m0 = Chem.MolFromInchi(inchi)
+    if m0 is None:
+        return None
+    try:
+        Chem.SanitizeMol(m0)
+    except Exception:
+        return None
+
+    mh = Chem.AddHs(m0)
+    n = mh.GetNumAtoms()
+    if n != len(xyz_data.atoms):
+        return None
+
+    mol_syms = [mh.GetAtomWithIdx(i).GetSymbol() for i in range(n)]
+    xyz_syms = list(xyz_data.atoms)
+
+    params = None
+    for factory in (
+        getattr(AllChem, "ETKDGv3", None),
+        getattr(AllChem, "ETKDGv2", None),
+        getattr(AllChem, "ETKDG", None),
+    ):
+        if factory is not None:
+            try:
+                params = factory()
+                break
+            except Exception:
+                continue
+    if params is None:
+        params = AllChem.EmbedParameters()
+
+    embedded = False
+    for seed in (0xC0FFEE, 42, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9):
+        params.randomSeed = seed
+        if AllChem.EmbedMolecule(mh, params) == 0:
+            embedded = True
+            break
+    if not embedded:
+        if AllChem.EmbedMolecule(mh, randomSeed=42, useRandomCoords=True) != 0:
+            return None
+
+    dm_mol = _pairwise_distances_from_mol(mh)
+    if not dm_mol:
+        return None
+    dm_xyz = _pairwise_distances(xyz_data.coordinates)
+
+    perms = list(_symbol_matching_permutations(mol_syms, xyz_syms))
+    if not perms:
+        return None
+    best = min(perms, key=lambda p: _perm_distance_score(dm_mol, dm_xyz, p))
+
+    conf = Chem.Conformer(n)
+    for i in range(n):
+        xi, yi, zi = xyz_data.coordinates[best[i]]
+        conf.SetAtomPosition(i, (xi, yi, zi))
+    mh.RemoveAllConformers()
+    mh.AddConformer(conf, assignId=True)
+
+    try:
+        Chem.SanitizeMol(mh)
+    except Exception:
+        try:
+            Chem.SanitizeMol(mh, sanitizeOps=Chem.SanitizeFlags.SANITIZE_FINDRADICALS)
+        except Exception:
+            try:
+                Chem.SanitizeMol(mh, sanitizeOps=Chem.SanitizeFlags.SANITIZE_NONE)
+            except Exception:
+                return None
+    return mh
+
+
 # ---------- Species (original API fields only) ----------
 # NOTE: XYZ may be a filename (str), expanded list[str], or None
 XYZType = Optional[Union[str, List[str]]]
@@ -417,6 +556,10 @@ class Species:
     def to_rdkit_mol(self):
         """Convert species XYZ data to RDKit Mol object.
         
+        Prefers ATcT SMILES/InChI for bond orders and formal charge, then assigns
+        3D coordinates from expanded XYZ (element-matched permutation). Falls back
+        to distance-based ``XYZData.to_rdkit_mol`` when that is not possible.
+
         Returns:
             RDKit Mol object if XYZ data is available.
             
@@ -427,7 +570,11 @@ class Species:
         xyz_data = self.get_xyz_data()
         if xyz_data is None:
             raise ValueError("No XYZ data available for this species")
-        
+
+        mol_tpl = _species_rdkit_from_smiles_or_inchi_xyz(self, xyz_data)
+        if mol_tpl is not None:
+            return mol_tpl
+
         return xyz_data.to_rdkit_mol()
     
     def to_pymatgen_molecule(self):
