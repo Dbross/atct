@@ -475,6 +475,7 @@ class Species:
     delta_h_0k: Optional[str]
     delta_h_298k: Optional[str]
     delta_h_298k_uncertainty: Optional[str]
+    mass: Optional[str]
     smiles: Optional[str]
     casrn: Optional[str]
     inchi: Optional[str]
@@ -492,6 +493,7 @@ class Species:
             delta_h_0k=d.get("∆fH_0K"),
             delta_h_298k=d.get("∆fH_298K"),
             delta_h_298k_uncertainty=d.get("∆fH_298K_uncertainty"),
+            mass=d.get("mass"),
             smiles=d.get("SMILES"),
             casrn=d.get("CASRN"),
             inchi=d.get("InChI"),
@@ -509,6 +511,7 @@ class Species:
             "∆fH_0K": self.delta_h_0k,
             "∆fH_298K": self.delta_h_298k,
             "∆fH_298K_uncertainty": self.delta_h_298k_uncertainty,
+            "Mass": self.mass,
             "SMILES": self.smiles,
             "CASRN": self.casrn,
             "InChI": self.inchi,
